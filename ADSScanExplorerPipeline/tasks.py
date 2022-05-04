@@ -16,17 +16,16 @@ app = app_module.ADSScanExplorerPipeline('ads-scan-pipeline', proj_home=proj_hom
 logger = app.logger
 
 app.conf.CELERY_QUEUES = (
-    Queue('process-new-volume', app.exchange, routing_key='process-new-volume'),
-    Queue('maintenance_reevaluate', app.exchange, routing_key='maintenance_reevaluate'),
-    Queue('output-results', app.exchange, routing_key='output-results'),
+    Queue('process-volume', app.exchange, routing_key='process-volume'),
+    Queue('investigate-new-volumes', app.exchange, routing_key='investigate-new-volumes'),
 )
 
 # ============================= TASKS ============================================= #
 
 @app.task(queue='process-volume')
-def task_process_volume(journal_volume_id: uuid, force=False):
+def task_process_volume(journal_volume_id: uuid):
     """
-    Process new volume
+    Processes a journal volume
     """
     with app.session_scope() as session:
         session.begin()
@@ -53,7 +52,7 @@ def task_process_volume(journal_volume_id: uuid, force=False):
             session.commit()
 
 @app.task(queue='investigate-new-volumes')
-def task_investigate_new_volumes(force=False):
+def task_investigate_new_volumes():
     """
     Investigate if any new or updated volumes exists
     """
@@ -68,13 +67,12 @@ def task_investigate_new_volumes(force=False):
                     existing_vol.file_hase = vol.file_hash
                     session.add(existing_vol)
                     session.commit()
-                    #TODO add update task
+                    task_process_volume.delay(existing_vol.id)
             else:
                 vol.status = VolumeStatus.New
                 session.add(vol)
                 session.commit()
-                #TODO add new task
-                
+                task_process_volume.delay(vol.id)
 
 if __name__ == '__main__':
     app.start()

@@ -7,7 +7,21 @@ from ADSScanExplorerPipeline.app import ADSScanExplorerPipeline
 from sqlalchemy.orm import Session
 from PIL import Image
 from PIL.TiffTags import TAGS
+from adsputils import setup_logging, load_config
 
+# ============================= INITIALIZATION ==================================== #
+# - Use app logger:
+#import logging
+#logger = logging.getLogger('ads-citation-capture')
+# - Or individual logger for this file:
+proj_home = os.path.realpath(os.path.join(os.path.dirname(__file__), '../'))
+config = load_config(proj_home=proj_home)
+logger = setup_logging(__name__, proj_home=proj_home,
+                        level=config.get('LOGGING_LEVEL', 'INFO'),
+                        attach_stdout=config.get('LOG_STDOUT', False))
+
+
+# =============================== FUNCTIONS ======================================= #
 def parse_top_file(file_path: str, journal_volume: JournalVolume, session: Session) -> Iterable[Page]:
     """
     Loops through the volumes .top file and yields a Page object for each row
@@ -93,6 +107,9 @@ def parse_image_files(image_path: str, journal_volume: JournalVolume, session: S
         yield page
 
 def identify_journals(iput_folder_path : str) -> Iterable[JournalVolume]:
+    """
+    Loops through the base folder to identify all journal volumnes that exists
+    """
     for type in os.listdir(iput_folder_path):
         type_path = os.path.join(iput_folder_path, type)
         if not os.path.isdir(type_path):
@@ -109,6 +126,7 @@ def identify_journals(iput_folder_path : str) -> Iterable[JournalVolume]:
                     yield vol
 
 def parse_volume_from_top_file(filename : str, journal : str):
+    """ Parses out the volume name from the top file"""
     return filename.replace(".top", "").replace(journal, "")
 
 def hash_volume(base_path: str, vol: JournalVolume):
@@ -127,4 +145,4 @@ def hash_volume(base_path: str, vol: JournalVolume):
         file_path = os.path.join(image_path, file)
         modified_time = os.path.getmtime(file_path)
         vol_hash = md5((vol_hash + str(modified_time)).encode("utf-8")).hexdigest()
-    print(vol_hash)
+    return vol_hash
