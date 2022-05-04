@@ -1,13 +1,21 @@
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, ForeignKey, Integer, String, Table, UniqueConstraint, Enum
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Session
 from sqlalchemy_utils.types import  UUIDType
 from ADSScanExplorerPipeline.exceptions import PageNameException
+from __future__ import annotations
 import uuid
 import enum
 
 Base = declarative_base()
 
+class VolumeStatus(enum.Enum):
+    """Volume ingestion status"""
+    New = 1
+    Processing = 2
+    Update = 3
+    Done = 4
+    Error = 5
 
 class PageColor(enum.Enum):
     """Page Color Type"""
@@ -40,7 +48,8 @@ class JournalVolume(Base):
     journal = Column(String)
     volume = Column(String)
     type = Column(String)
-
+    status = Column(Enum(VolumeStatus))
+    file_hash = Column(String)
 
 page_article_association_table = Table('page2article', Base.metadata,
     Column('page_id', ForeignKey('page.id'), primary_key=True),
@@ -50,18 +59,30 @@ page_article_association_table = Table('page2article', Base.metadata,
 class Article(Base):
     _tablename_ = 'article'
 
+    def __init__(self, name, journal_volume_id):
+        self.name = name
+        self.journal_volume_id = journal_volume_id
+
     id = Column(UUIDType, default=uuid.uuid4, primary_key=True)
     bibcode = Column(String)
     journal_volume_id = Column(UUIDType, ForeignKey(JournalVolume.id))
     pages = relationship('Page', secondary=page_article_association_table, back_populates='articles', lazy='dynamic')
 
+    @classmethod
+    def get_or_create(cls, name: str, journal_volume_id: uuid, session: Session) -> Article:
+        article = session.query(cls).filter(cls.name == name, cls.journal_volume_id == journal_volume_id).one_or_none()
+        if not article:
+            article = Article(name, journal_volume_id)
+        return article
+
 class Page(Base):
     _tablename_ = 'page'
 
-    def __init__(self, name):
+    def __init__(self, name, journal_volume_id):
+        self.name = name
+        self.journal_volume_id = journal_volume_id
         self.color_type = PageColor.BW
         self.parse_info_from_name(name)
-
 
     id = Column(UUIDType, default=uuid.uuid4, primary_key=True)
     name = Column(String)
@@ -78,9 +99,16 @@ class Page(Base):
     UniqueConstraint(journal_volume_id, volume_running_page_num)
 
     @classmethod
-    def get_from_name_and_journal(cls, name: str, journal_id:uuid, session):
-        return session.query(cls).filter(cls.name == name, cls.journal_volume_id == journal_id).one_or_none()
+    def get_from_name_and_journal(cls, name: str, volume_id:uuid, session: Session) -> Page:
+        return session.query(cls).filter(cls.name == name, cls.journal_volume_id == volume_id).one_or_none()
     
+    @classmethod
+    def get_or_create(cls, name, journal_volume_id: JournalVolume, session: Session) -> Page:
+        page = cls.get_from_name_and_journal(name, journal_volume_id, session)
+        if not page:
+            page = Page(name, journal_volume_id)
+        return page
+
     def parse_info_from_name(self, name) -> str:
         """In general file names follow the following format
 
