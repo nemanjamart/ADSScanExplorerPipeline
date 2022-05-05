@@ -8,6 +8,7 @@ from sqlalchemy_utils.types import UUIDType
 from sqlalchemy_utils.models import Timestamp
 
 from ADSScanExplorerPipeline.exceptions import PageNameException
+from ADSScanExplorerPipeline.utils import is_valid_uuid
 import enum
 
 Base = declarative_base()
@@ -65,7 +66,24 @@ class JournalVolume(Base, Timestamp):
     
     @classmethod
     def get(cls, id: str, session: Session) -> JournalVolume:
-        return session.query(cls).filter(cls.id ==id).one_or_none()
+        return session.query(cls).filter(cls.id == id).one_or_none()
+
+    @classmethod
+    def get_from_id_or_name(cls, id: str, session: Session) -> JournalVolume:
+        vol = None
+        if is_valid_uuid(id):
+            vol = session.query(cls).filter(cls.id == id).one()
+        if vol:
+            return vol
+        vol = session.query(cls).filter(cls.journal == id[0:5], cls.volume == id[5:9]).one()
+        if vol:
+            return vol
+        raise ValueError
+        
+
+    @classmethod
+    def get_errors(cls, session: Session) -> JournalVolume:
+        return session.query(cls).filter(cls.status == VolumeStatus.Error).all()
 
 
 page_article_association_table = Table('page2article', Base.metadata,
