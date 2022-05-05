@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
-from ADSScanExplorerPipeline.tasks import task_investigate_new_volumes
+import argparse
+from ADSScanExplorerPipeline.tasks import task_investigate_new_volumes, task_rerun_error_volumes, task_process_volume
 
 # ============================= INITIALIZATION ==================================== #
 
@@ -14,4 +15,41 @@ logger = setup_logging('run.py', proj_home=proj_home,
 # =============================== FUNCTIONS ======================================= #
 
 if __name__ == '__main__':
-    task_investigate_new_volumes.delay()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input_folder",
+                    dest="input_folder",
+                    required=True,
+                    type=str,
+                    help="Path to the base folder of all lists and bitmaps of all journals")
+    subparsers = parser.add_subparsers(help='commands', dest="action")
+    subparsers.add_parser('NEW', help='Loops through input folder and processes all new or updated volumes')
+    subparsers.add_parser('ERROR', help='Process all volumes which have encountered errors in previous ingestions')
+    run_parser = subparsers.add_parser('SINGLE', help='Process single volume')
+    run_parser.add_argument('--id',
+                        dest='ids',
+                        nargs='+',
+                        required=True,
+                        type=str,
+                        help='Space separated ids, either uuid found in DB or journal(5 chars)_volume(4 chars) e.g. ApJ..0333')
+    # maintenance_parser = subparsers.add_parser('MAINTENANCE', help='Execute maintenance task')
+
+    args = parser.parse_args()
+    input_folder = os.path.join(proj_home, args.input_folder)
+    if not os.path.exists(args.input_folder):
+        parser.error("the folder '{}' does not exist".format(input_folder))
+    elif not os.access(args.input_folder, os.R_OK):
+        parser.error("the folder '{}' cannot be accessed".format(input_folder))
+    else:
+        
+        if args.action == "NEW":
+            logger.info("Process all new volumes in: %s", input_folder)
+            task_investigate_new_volumes.delay(input_folder)
+        elif args.action == "ERROR":
+            logger.info("Process all volumes with previous errors in: %s", input_folder)
+            task_rerun_error_volumes.delay(input_folder)
+        elif args.action == "SINGLE":
+            for id in args.ids:
+                logger.info("Process volume: %s in: %s", id, input_folder)
+                task_process_volume.delay(input_folder, id)
+
+        run_parser.parse_args
