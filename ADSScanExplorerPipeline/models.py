@@ -1,10 +1,11 @@
+from __future__ import annotations
+from email.policy import default
+import uuid 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, ForeignKey, Integer, String, Table, UniqueConstraint, Enum
 from sqlalchemy.orm import relationship, Session
-from sqlalchemy_utils.types import  UUIDType
+from sqlalchemy_utils.types import UUIDType
 from ADSScanExplorerPipeline.exceptions import PageNameException
-from __future__ import annotations
-import uuid
 import enum
 
 Base = declarative_base()
@@ -42,7 +43,12 @@ class PageType(enum.Enum):
         }[separator]
 
 class JournalVolume(Base):
-    _tablename_ = 'journal_volume'
+    __tablename__ = 'journal_volume'
+
+    def __init__(self, type, journal, volume):
+        self.type = type
+        self.journal = journal
+        self.volume = volume
 
     id = Column(UUIDType, default=uuid.uuid4, primary_key=True)
     journal = Column(String)
@@ -51,32 +57,42 @@ class JournalVolume(Base):
     status = Column(Enum(VolumeStatus))
     file_hash = Column(String)
 
+    @classmethod
+    def get_from_obj(cls, vol: JournalVolume, session: Session) -> JournalVolume:
+        return session.query(cls).filter(cls.type == vol.type, cls.journal == vol.journal, cls.volume == vol.volume).one_or_none()
+    
+    @classmethod
+    def get(cls, id: str, session: Session) -> JournalVolume:
+        return session.query(cls).filter(cls.id ==id).one_or_none()
+
+
 page_article_association_table = Table('page2article', Base.metadata,
     Column('page_id', ForeignKey('page.id'), primary_key=True),
     Column('article_id', ForeignKey('article.id'), primary_key=True)
 )
 
 class Article(Base):
-    _tablename_ = 'article'
+    __tablename__ = 'article'
 
-    def __init__(self, name, journal_volume_id):
-        self.name = name
+    def __init__(self, bibcode, journal_volume_id):
+        self.id = bibcode
+        self.bibcode = bibcode
         self.journal_volume_id = journal_volume_id
 
-    id = Column(UUIDType, default=uuid.uuid4, primary_key=True)
+    id = Column(String, primary_key=True)
     bibcode = Column(String)
     journal_volume_id = Column(UUIDType, ForeignKey(JournalVolume.id))
     pages = relationship('Page', secondary=page_article_association_table, back_populates='articles', lazy='dynamic')
 
     @classmethod
-    def get_or_create(cls, name: str, journal_volume_id: uuid, session: Session) -> Article:
-        article = session.query(cls).filter(cls.name == name, cls.journal_volume_id == journal_volume_id).one_or_none()
+    def get_or_create(cls, bibcode: str, journal_volume_id: str, session: Session) -> Article:
+        article = session.query(cls).filter(cls.bibcode == bibcode, cls.journal_volume_id == journal_volume_id).one_or_none()
         if not article:
-            article = Article(name, journal_volume_id)
+            article = Article(bibcode, journal_volume_id)
         return article
 
 class Page(Base):
-    _tablename_ = 'page'
+    __tablename__ = 'page'
 
     def __init__(self, name, journal_volume_id):
         self.name = name
@@ -84,7 +100,7 @@ class Page(Base):
         self.color_type = PageColor.BW
         self.parse_info_from_name(name)
 
-    id = Column(UUIDType, default=uuid.uuid4, primary_key=True)
+    id = Column(UUIDType, default=uuid.uuid4,  primary_key=True)
     name = Column(String)
     label = Column(String)
     format = Column(String, default='image/tiff')
@@ -99,11 +115,11 @@ class Page(Base):
     UniqueConstraint(journal_volume_id, volume_running_page_num)
 
     @classmethod
-    def get_from_name_and_journal(cls, name: str, volume_id:uuid, session: Session) -> Page:
+    def get_from_name_and_journal(cls, name: str, volume_id: str, session: Session) -> Page:
         return session.query(cls).filter(cls.name == name, cls.journal_volume_id == volume_id).one_or_none()
     
     @classmethod
-    def get_or_create(cls, name, journal_volume_id: JournalVolume, session: Session) -> Page:
+    def get_or_create(cls, name, journal_volume_id: str, session: Session) -> Page:
         page = cls.get_from_name_and_journal(name, journal_volume_id, session)
         if not page:
             page = Page(name, journal_volume_id)

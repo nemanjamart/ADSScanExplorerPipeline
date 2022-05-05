@@ -3,7 +3,6 @@ import os
 from hashlib import md5
 from typing import Iterable
 from ADSScanExplorerPipeline.models import JournalVolume, Page, Article, PageColor
-from ADSScanExplorerPipeline.app import ADSScanExplorerPipeline
 from sqlalchemy.orm import Session
 from PIL import Image
 from PIL.TiffTags import TAGS
@@ -36,7 +35,7 @@ def parse_top_file(file_path: str, journal_volume: JournalVolume, session: Sessi
             line_split = re.split("\s+", line)
             #First is page name, second possibly page number if exists
             name = line_split[0]
-            page = Page.get_or_create(name, journal_volume, session)
+            page = Page.get_or_create(name, journal_volume.id, session)
             page.volume_running_page_num = running_page_num
             if len(line_split) > 1:
                 page_num = line_split[1]
@@ -54,13 +53,12 @@ def parse_dat_file(file_path: str, journal_volume: JournalVolume, session: Sessi
             line_num += 1
             line_split = re.split("[\s+|]", line.strip())
             article_name = line_split[0]
-            article = Article.get_or_create(article_name, journal_volume, session)
-            article_page_num = 0
+            article = Article.get_or_create(article_name, journal_volume.id, session)
+            article.pages = []
             first = True
             for page_name in line_split[3:]:
                 if len(page_name) != 11:
                     continue
-                article_page_num += 1
                 page = Page.get_from_name_and_journal(page_name, journal_volume.id, session)
                 if first:
                     article.page_start = page.volume_running_page_num
@@ -106,12 +104,13 @@ def parse_image_files(image_path: str, journal_volume: JournalVolume, session: S
         img.close()
         yield page
 
-def identify_journals(iput_folder_path : str) -> Iterable[JournalVolume]:
+def identify_journals(input_folder_path : str) -> Iterable[JournalVolume]:
     """
     Loops through the base folder to identify all journal volumnes that exists
     """
-    for type in os.listdir(iput_folder_path):
-        type_path = os.path.join(iput_folder_path, type)
+    list_path = os.path.join(input_folder_path, "lists")
+    for type in os.listdir(list_path):
+        type_path = os.path.join(list_path, type)
         if not os.path.isdir(type_path):
             continue
         for journal in os.listdir(type_path):
@@ -122,7 +121,7 @@ def identify_journals(iput_folder_path : str) -> Iterable[JournalVolume]:
                 if ".top" in file:
                     volume = parse_volume_from_top_file(file, journal)
                     vol = JournalVolume(type, journal, volume)
-                    vol.file_hash = hash_volume()
+                    vol.file_hash = hash_volume(input_folder_path, vol)
                     yield vol
 
 def parse_volume_from_top_file(filename : str, journal : str):
@@ -145,4 +144,6 @@ def hash_volume(base_path: str, vol: JournalVolume):
         file_path = os.path.join(image_path, file)
         modified_time = os.path.getmtime(file_path)
         vol_hash = md5((vol_hash + str(modified_time)).encode("utf-8")).hexdigest()
+
+    #TODO include OCR
     return vol_hash
