@@ -1,11 +1,9 @@
 
 import os
 import uuid
-from ADSScanExplorerPipeline.models import VolumeStatus
-from ADSScanExplorerPipeline.models import JournalVolume
+from ADSScanExplorerPipeline.models import JournalVolume, VolumeStatus
 from ADSScanExplorerPipeline.ingestor import parse_top_file, parse_dat_file, parse_image_files, identify_journals
 from kombu import Queue
-from datetime import datetime
 import ADSScanExplorerPipeline.app as app_module
 # import adsmsg
 
@@ -28,20 +26,15 @@ def task_process_volume(journal_volume_id: uuid):
     Processes a journal volume
     """
     with app.session_scope() as session:
-        session.begin(subtransactions=True)
         try:
             vol = JournalVolume.get(journal_volume_id, session)
             vol.status = VolumeStatus.Processing
             session.add(vol)
             session.commit()
-            session.flush()
-            session.close()
         except Exception as e:
             session.rollback()
-            session.close()
             logger.error(e)
 
-        session.begin(subtransactions=True)
         try:
             vol = JournalVolume.get(journal_volume_id, session)
             top_filename = vol.journal + vol.volume + ".top"
@@ -59,19 +52,16 @@ def task_process_volume(journal_volume_id: uuid):
                 session.add(page)
             
             #TODO copy image files
-            # vol.status = VolumeStatus.Done
+            vol.status = VolumeStatus.Done
         except:
             session.rollback()
-            session.close()
             try:
-                session.begin(subtransactions=True)
                 journal_volume = JournalVolume.get(journal_volume_id, session)
                 journal_volume.status = VolumeStatus.Error
                 session.add(journal_volume)
                 session.commit()
-            except:
-                print("Something went wrong")
-            raise
+            except Exception as e:
+                print(e)
         else:
             session.commit()
 
@@ -80,31 +70,29 @@ def task_investigate_new_volumes():
     """
     Investigate if any new or updated volumes exists
     """
-    with app.session_scope() as session:
-        #TODO
-        base_path = "../ADS_scans_sample"
-        for vol in identify_journals(base_path):
+    #TODO
+    base_path = "../ADS_scans_sample"
+    for vol in identify_journals(base_path):
+        vol_to_process  = None
+        with app.session_scope() as session:
             existing_vol = JournalVolume.get_from_obj(vol, session)
             if existing_vol:
-                print(vol.journal)
-                print(vol.file_hash)
-                print(existing_vol.file_hash)
                 if vol.file_hash != existing_vol.file_hash:
-                    existing_vol.status = VolumeStatus.Update
-                    existing_vol.file_hase = vol.file_hash
-                    session.add(existing_vol)
-                    session.commit()
-                    session.flush()
-                    task_process_volume.delay(existing_vol.id)
-                else:
-                    task_process_volume.delay(existing_vol.id)
+                        existing_vol.status = VolumeStatus.Update
+                        existing_vol.file_hash = vol.file_hash
+                        session.add(existing_vol)
+                        session.commit()
+                        vol_to_process = existing_vol.id
+                elif existing_vol.status != VolumeStatus.Done:
+                    vol_to_process = existing_vol.id
                     #TODO deal with error and new
             else:
                 vol.status = VolumeStatus.New
                 session.add(vol)
                 session.commit()
-                task_process_volume.delay(vol.id)
-
+                vol_to_process = vol.id
+        if vol_to_process:
+            task_process_volume.delay(vol_to_process)
 
 if __name__ == '__main__':
     app.start()
