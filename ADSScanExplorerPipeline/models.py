@@ -5,6 +5,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, ForeignKey, Integer, String, Table, UniqueConstraint, Enum
 from sqlalchemy.orm import relationship, Session
 from sqlalchemy_utils.types import UUIDType
+from sqlalchemy_utils.models import Timestamp
+
 from ADSScanExplorerPipeline.exceptions import PageNameException
 import enum
 
@@ -42,7 +44,7 @@ class PageType(enum.Enum):
             'P': cls.Plate,
         }[separator]
 
-class JournalVolume(Base):
+class JournalVolume(Base, Timestamp):
     __tablename__ = 'journal_volume'
 
     def __init__(self, type, journal, volume):
@@ -71,27 +73,26 @@ page_article_association_table = Table('page2article', Base.metadata,
     Column('article_id', ForeignKey('article.id'), primary_key=True)
 )
 
-class Article(Base):
+class Article(Base, Timestamp):
     __tablename__ = 'article'
 
     def __init__(self, bibcode, journal_volume_id):
-        self.id = bibcode
         self.bibcode = bibcode
         self.journal_volume_id = journal_volume_id
 
-    id = Column(String, primary_key=True)
+    id = Column(UUIDType, default=uuid.uuid4, primary_key=True)
     bibcode = Column(String)
     journal_volume_id = Column(UUIDType, ForeignKey(JournalVolume.id))
     pages = relationship('Page', secondary=page_article_association_table, back_populates='articles', lazy='dynamic')
 
     @classmethod
-    def get_or_create(cls, bibcode: str, journal_volume_id: str, session: Session) -> Article:
+    def get_or_create(cls, bibcode: str, journal_volume_id: uuid.UUID, session: Session) -> Article:
         article = session.query(cls).filter(cls.bibcode == bibcode, cls.journal_volume_id == journal_volume_id).one_or_none()
         if not article:
             article = Article(bibcode, journal_volume_id)
         return article
 
-class Page(Base):
+class Page(Base, Timestamp):
     __tablename__ = 'page'
 
     def __init__(self, name, journal_volume_id):
@@ -115,11 +116,11 @@ class Page(Base):
     UniqueConstraint(journal_volume_id, volume_running_page_num)
 
     @classmethod
-    def get_from_name_and_journal(cls, name: str, volume_id: str, session: Session) -> Page:
+    def get_from_name_and_journal(cls, name: str, volume_id: uuid.UUID, session: Session) -> Page:
         return session.query(cls).filter(cls.name == name, cls.journal_volume_id == volume_id).one_or_none()
     
     @classmethod
-    def get_or_create(cls, name, journal_volume_id: str, session: Session) -> Page:
+    def get_or_create(cls, name, journal_volume_id: uuid.UUID, session: Session) -> Page:
         page = cls.get_from_name_and_journal(name, journal_volume_id, session)
         if not page:
             page = Page(name, journal_volume_id)
