@@ -4,11 +4,11 @@ LOGGING_LEVEL = 'INFO'
 LOG_STDOUT = True
 
 CELERY_INCLUDE = ['ADSScanExplorerPipeline.tasks']
-CELERY_BROKER = 'pyamqp://user:password@localhost:5672/citation_capture_pipeline'
+CELERY_BROKER = 'pyamqp://user:password@localhost:5672/scan_explorer_pipeline'
 OUTPUT_CELERY_BROKER = 'pyamqp://user:password@localhost:5672/master_pipeline'
 OUTPUT_TASKNAME = 'adsmp.tasks.task_update_record'
 
-SQLALCHEMY_URL = 'postgres://postgres@localhost:5432/citation_capture_pipeline'
+SQLALCHEMY_URL = 'postgres://scan_explorer:scan_explorer@localhost:5432/scan_explorer_pipeline'
 SQLALCHEMY_ECHO = False
 # When 'True', no events are emitted to the broker via the webhook
 TESTING_MODE = True
