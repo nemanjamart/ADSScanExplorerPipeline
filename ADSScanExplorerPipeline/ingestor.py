@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from PIL import Image
 from PIL.TiffTags import TAGS
 from adsputils import setup_logging, load_config
+import boto3
 
 # ============================= INITIALIZATION ==================================== #
 # - Use app logger:
@@ -104,6 +105,25 @@ def parse_image_files(image_path: str, journal_volume: JournalVolume, session: S
         img.close()
         yield page
 
+def upload_image_files(image_path: str, vol: JournalVolume, session: Session):
+    """
+    Uploads all image files which have been associated with a page in the volume to a s3 bucket defined in config
+    """
+    s3_bucket = boto3.resource("s3").Bucket(config.get('S3_BUCKET', ""))
+    for filename in os.listdir(image_path):
+        if filename.endswith(".png") or filename.endswith(".jpg"):
+            continue
+        base_filename = filename.replace(".tif", "")
+        page = Page.get_from_name_and_journal(base_filename, vol.id, session)
+        if not page:
+            #Image file not in lists 
+            continue
+        file_path = os.path.join(image_path, filename)
+        #TODO deal with 200dpi
+        s3_file_path = os.path.join("bitmaps", vol.type, vol.journal.replace(".","_"), vol.volume, "600", filename)
+        s3_bucket.upload_file(file_path, s3_file_path)
+
+        
 def identify_journals(input_folder_path : str) -> Iterable[JournalVolume]:
     """
     Loops through the base folder to identify all journal volumnes that exists

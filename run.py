@@ -16,11 +16,16 @@ logger = setup_logging('run.py', proj_home=proj_home,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input_folder",
+    parser.add_argument("--input-folder",
                     dest="input_folder",
                     required=True,
                     type=str,
                     help="Path to the base folder of all lists and bitmaps of all journals")
+    parser.add_argument("--upload-files",
+                    dest="upload",
+                    required=False,
+                    type=bool,
+                    help="If image files should be uploaded to the s3 bucket")
     subparsers = parser.add_subparsers(help='commands', dest="action")
     subparsers.add_parser('NEW', help='Loops through input folder and processes all new or updated volumes')
     subparsers.add_parser('ERROR', help='Process all volumes which have encountered errors in previous ingestions')
@@ -40,16 +45,20 @@ if __name__ == '__main__':
     elif not os.access(args.input_folder, os.R_OK):
         parser.error("the folder '{}' cannot be accessed".format(input_folder))
     else:
+        #TODO change to True by default before operational release
+        upload = False 
+        if args.upload:
+            upload = True
         
         if args.action == "NEW":
             logger.info("Process all new volumes in: %s", input_folder)
-            task_investigate_new_volumes.delay(input_folder)
+            task_investigate_new_volumes.delay(input_folder, upload)
         elif args.action == "ERROR":
             logger.info("Process all volumes with previous errors in: %s", input_folder)
-            task_rerun_error_volumes.delay(input_folder)
+            task_rerun_error_volumes.delay(input_folder, upload)
         elif args.action == "SINGLE":
             for id in args.ids:
                 logger.info("Process volume: %s in: %s", id, input_folder)
-                task_process_volume.delay(input_folder, id)
+                task_process_volume.delay(input_folder, id, upload)
 
         run_parser.parse_args

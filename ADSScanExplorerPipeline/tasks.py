@@ -2,7 +2,7 @@
 import os
 import uuid
 from ADSScanExplorerPipeline.models import JournalVolume, VolumeStatus
-from ADSScanExplorerPipeline.ingestor import parse_top_file, parse_dat_file, parse_image_files, identify_journals
+from ADSScanExplorerPipeline.ingestor import parse_top_file, parse_dat_file, parse_image_files, identify_journals, upload_image_files
 from kombu import Queue
 import ADSScanExplorerPipeline.app as app_module
 # import adsmsg
@@ -22,7 +22,7 @@ app.conf.CELERY_QUEUES = (
 # ============================= TASKS ============================================= #
 
 @app.task(queue='process-volume')
-def task_process_volume(base_path: str, journal_volume_id: str):
+def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bool = False):
     """
     Processes a journal volume
     """
@@ -53,8 +53,9 @@ def task_process_volume(base_path: str, journal_volume_id: str):
 
             for page in parse_image_files(image_path, vol, session):
                 session.add(page)
-            
-            #TODO copy image files
+            if upload_files:
+                upload_image_files(image_path, vol, session)
+                #TODO possibly upload OCR files as well
             vol.status = VolumeStatus.Done
         except Exception as e:
             session.rollback()
@@ -70,7 +71,7 @@ def task_process_volume(base_path: str, journal_volume_id: str):
             session.commit()
 
 @app.task(queue='investigate-new-volumes')
-def task_investigate_new_volumes(base_path: str):
+def task_investigate_new_volumes(base_path: str, upload_files: bool = False):
     """
     Investigate if any new or updated volumes exists
     """
@@ -92,10 +93,10 @@ def task_investigate_new_volumes(base_path: str):
                 session.commit()
                 vol_to_process = vol.id
         if vol_to_process:
-            task_process_volume.delay(base_path, vol_to_process)
+            task_process_volume.delay(base_path, vol_to_process, upload_files)
 
 @app.task(queue='rerun_error_volumes')
-def task_rerun_error_volumes(base_path: str):
+def task_rerun_error_volumes(base_path: str, upload_files: bool = False):
     """
     Rerun all journal volumes with status 'Error'
     """
@@ -104,7 +105,7 @@ def task_rerun_error_volumes(base_path: str):
         for vol in JournalVolume.get_errors(session):
             volumes_to_process.append(vol.id)
     for vol_id in volumes_to_process:
-        task_process_volume.delay(base_path, vol_id)
+        task_process_volume.delay(base_path, vol_id, upload_files)
 
 if __name__ == '__main__':
     app.start()

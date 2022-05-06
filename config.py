@@ -8,6 +8,7 @@ CELERY_BROKER = 'pyamqp://user:password@localhost:5672/scan_explorer_pipeline'
 OUTPUT_CELERY_BROKER = 'pyamqp://user:password@localhost:5672/master_pipeline'
 OUTPUT_TASKNAME = 'adsmp.tasks.task_update_record'
 
+S3_BUCKET = 'scan-explorer'
 SQLALCHEMY_URL = 'postgres://scan_explorer:scan_explorer@localhost:5432/scan_explorer_pipeline'
 SQLALCHEMY_ECHO = False
 # When 'True', no events are emitted to the broker via the webhook
