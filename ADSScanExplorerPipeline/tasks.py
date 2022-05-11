@@ -2,7 +2,7 @@
 import os
 import uuid
 from ADSScanExplorerPipeline.models import JournalVolume, VolumeStatus
-from ADSScanExplorerPipeline.ingestor import parse_top_file, parse_dat_file, parse_image_files, identify_journals, upload_image_files
+from ADSScanExplorerPipeline.ingestor import parse_top_file, parse_dat_file, parse_image_files, identify_journals, upload_image_files, check_all_image_files_exists
 from kombu import Queue
 import ADSScanExplorerPipeline.app as app_module
 # import adsmsg
@@ -41,7 +41,6 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
 
         try:
             top_filename = vol.journal + vol.volume + ".top"
-            base_path = "../ADS_scans_sample"
             top_file_path = os.path.join(base_path, "lists", vol.type, vol.journal, top_filename)
             dat_file_path = top_file_path.replace(".top", ".dat")
             image_path = os.path.join(base_path, "bitmaps", vol.type, vol.journal, vol.volume, "600")
@@ -50,6 +49,8 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
 
             for article in parse_dat_file(dat_file_path, vol, session):
                 session.add(article)
+
+            check_all_image_files_exists(image_path, vol, session)
 
             for page in parse_image_files(image_path, vol, session):
                 session.add(page)
