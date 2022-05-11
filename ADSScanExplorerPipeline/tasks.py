@@ -70,9 +70,10 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
                 logger.error("Failed setting error on volume: %s due to: %s", str(journal_volume_id), e2)
         else:
             session.commit()
+    return session
 
 @app.task(queue='investigate-new-volumes')
-def task_investigate_new_volumes(base_path: str, upload_files: bool = False):
+def task_investigate_new_volumes(base_path: str, upload_files: bool = False, process = True):
     """
     Investigate if any new or updated volumes exists
     """
@@ -93,8 +94,9 @@ def task_investigate_new_volumes(base_path: str, upload_files: bool = False):
                 session.add(vol)
                 session.commit()
                 vol_to_process = vol.id
-        if vol_to_process:
+        if vol_to_process and process:
             task_process_volume.delay(base_path, vol_to_process, upload_files)
+    return session
 
 @app.task(queue='rerun_error_volumes')
 def task_rerun_error_volumes(base_path: str, upload_files: bool = False):
