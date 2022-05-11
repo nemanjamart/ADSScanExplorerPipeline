@@ -1,6 +1,7 @@
 from __future__ import annotations
 from email.policy import default
 import uuid 
+from typing import List
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, ForeignKey, Integer, String, Table, UniqueConstraint, Enum
 from sqlalchemy.orm import relationship, Session
@@ -134,8 +135,12 @@ class Page(Base, Timestamp):
     UniqueConstraint(journal_volume_id, volume_running_page_num)
 
     @classmethod
+    def get_all_from_volume(cls, volume_id: uuid.UUID, session: Session) -> List[Page]:
+        return session.query(cls).filter(cls.journal_volume_id == volume_id).all()
+    
+    @classmethod
     def get_from_name_and_journal(cls, name: str, volume_id: uuid.UUID, session: Session) -> Page:
-        return session.query(cls).filter(cls.name == name, cls.journal_volume_id == volume_id).one_or_none()
+        return session.query(cls).filter(cls.name == name, cls.journal_volume_id == volume_id).first()
     
     @classmethod
     def get_or_create(cls, name, journal_volume_id: uuid.UUID, session: Session) -> Page:

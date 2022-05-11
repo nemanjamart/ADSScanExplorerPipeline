@@ -3,6 +3,7 @@ import os
 from hashlib import md5
 from typing import Iterable
 from ADSScanExplorerPipeline.models import JournalVolume, Page, Article, PageColor
+from ADSScanExplorerPipeline.exceptions import MissingImageFileException
 from sqlalchemy.orm import Session
 from PIL import Image
 from PIL.TiffTags import TAGS
@@ -33,7 +34,7 @@ def parse_top_file(file_path: str, journal_volume: JournalVolume, session: Sessi
             if line_num < 5: #Top file contains 4 header lines
                 continue
             running_page_num = line_num - 4
-            line_split = re.split("\s+", line)
+            line_split = re.split(r"\s+", line)
             #First is page name, second possibly page number if exists
             name = line_split[0]
             page = Page.get_or_create(name, journal_volume.id, session)
@@ -52,7 +53,7 @@ def parse_dat_file(file_path: str, journal_volume: JournalVolume, session: Sessi
         line_num = 0
         for line in file:
             line_num += 1
-            line_split = re.split("[\s+|]", line.strip())
+            line_split = re.split(r"[\s+|]", line.strip())
             article_name = line_split[0]
             article = Article.get_or_create(article_name, journal_volume.id, session)
             article.pages = []
@@ -67,6 +68,16 @@ def parse_dat_file(file_path: str, journal_volume: JournalVolume, session: Sessi
                 article.pages.append(page)
             article.page_end = page.volume_running_page_num
             yield article
+
+def check_all_image_files_exists(image_path: str, journal_volume: JournalVolume, session: Session):
+    """
+    Makes sure that all pages that have been found in the top file exists in the iamge folder as well
+    """
+    image_list = os.listdir(image_path)
+    for page in Page.get_all_from_volume(journal_volume.id, session):
+        if page.name not in image_list:
+            raise MissingImageFileException("Missing image file %s", page.name)
+
 
 def parse_image_files(image_path: str, journal_volume: JournalVolume, session: Session):
     """
@@ -148,7 +159,7 @@ def parse_volume_from_top_file(filename : str, journal : str):
     """ Parses out the volume name from the top file"""
     return filename.replace(".top", "").replace(journal, "")
 
-def hash_volume(base_path: str, vol: JournalVolume):
+def hash_volume(base_path: str, vol: JournalVolume) -> str:
     """
     Calculates a md5 hash from the change dates of all the associated images and files to the volume  
     """
