@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 import argparse
+from distutils.util import strtobool
 from ADSScanExplorerPipeline.tasks import task_investigate_new_volumes, task_rerun_error_volumes, task_process_volume
 
 # ============================= INITIALIZATION ==================================== #
@@ -24,7 +25,8 @@ if __name__ == '__main__':
     parser.add_argument("--upload-files",
                     dest="upload",
                     required=False,
-                    type=bool,
+                    default="False",
+                    type=str,
                     help="If image files should be uploaded to the s3 bucket")
     subparsers = parser.add_subparsers(help='commands', dest="action")
     subparsers.add_parser('NEW', help='Loops through input folder and processes all new or updated volumes')
@@ -47,12 +49,12 @@ if __name__ == '__main__':
     else:
         #TODO change to True by default before operational release
         upload = False 
-        if args.upload:
+        if bool(strtobool(args.upload)):
             upload = True
         
         if args.action == "NEW":
             logger.info("Process all new volumes in: %s", input_folder)
-            task_investigate_new_volumes.delay(input_folder, upload)
+            # task_investigate_new_volumes.delay(input_folder, upload)
         elif args.action == "ERROR":
             logger.info("Process all volumes with previous errors in: %s", input_folder)
             task_rerun_error_volumes.delay(input_folder, upload)
@@ -60,5 +62,3 @@ if __name__ == '__main__':
             for id in args.ids:
                 logger.info("Process volume: %s in: %s", id, input_folder)
                 task_process_volume.delay(input_folder, id, upload)
-
-        run_parser.parse_args
