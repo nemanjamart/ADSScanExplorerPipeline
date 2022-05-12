@@ -54,7 +54,7 @@ if __name__ == '__main__':
         
         if args.action == "NEW":
             logger.info("Process all new volumes in: %s", input_folder)
-            # task_investigate_new_volumes.delay(input_folder, upload)
+            task_investigate_new_volumes.delay(input_folder, upload)
         elif args.action == "ERROR":
             logger.info("Process all volumes with previous errors in: %s", input_folder)
             task_rerun_error_volumes.delay(input_folder, upload)
