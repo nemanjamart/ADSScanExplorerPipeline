@@ -1,9 +1,8 @@
 from __future__ import annotations
-from email.policy import default
 import uuid 
 from typing import List
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, ForeignKey, Integer, String, Table, UniqueConstraint, Enum
+from sqlalchemy import Column, ForeignKey, Integer, String, Table, UniqueConstraint, Enum, Index
 from sqlalchemy.orm import relationship, Session
 from sqlalchemy_utils.types import UUIDType
 from sqlalchemy_utils.models import Timestamp
@@ -47,12 +46,14 @@ class PageType(enum.Enum):
         }[separator]
 
 class JournalVolume(Base, Timestamp):
-    __tablename__ = 'journal_volume'
-
+    
     def __init__(self, type, journal, volume):
         self.type = type
         self.journal = journal
         self.volume = volume
+
+    __tablename__ = 'journal_volume'
+    __table_args__ = (Index('volume_index', "journal", "volume"), )
 
     id = Column(UUIDType, default=uuid.uuid4, primary_key=True)
     journal = Column(String)
@@ -60,6 +61,8 @@ class JournalVolume(Base, Timestamp):
     type = Column(String)
     status = Column(Enum(VolumeStatus))
     file_hash = Column(String)
+
+    UniqueConstraint(journal, volume)
 
     @classmethod
     def get_from_obj(cls, vol: JournalVolume, session: Session) -> JournalVolume:
@@ -94,13 +97,14 @@ page_article_association_table = Table('page2article', Base.metadata,
 
 class Article(Base, Timestamp):
     __tablename__ = 'article'
+    __table_args__ = (Index('article_volume_index', "journal_volume_id"), Index('article_bibcode_index', "bibcode"))
 
     def __init__(self, bibcode, journal_volume_id):
         self.bibcode = bibcode
         self.journal_volume_id = journal_volume_id
 
     id = Column(UUIDType, default=uuid.uuid4, primary_key=True)
-    bibcode = Column(String)
+    bibcode = Column(String, unique=True)
     journal_volume_id = Column(UUIDType, ForeignKey(JournalVolume.id))
     pages = relationship('Page', secondary=page_article_association_table, back_populates='articles', lazy='dynamic')
 
@@ -113,6 +117,7 @@ class Article(Base, Timestamp):
 
 class Page(Base, Timestamp):
     __tablename__ = 'page'
+    __table_args__ = (Index('page_volume_index', "journal_volume_id"), Index('page_name_index', "name"))
 
     def __init__(self, name, journal_volume_id):
         self.name = name
@@ -133,6 +138,8 @@ class Page(Base, Timestamp):
     articles = relationship('Article', secondary=page_article_association_table, back_populates='pages')
 
     UniqueConstraint(journal_volume_id, volume_running_page_num)
+    UniqueConstraint(journal_volume_id, name)
+
 
     @classmethod
     def get_all_from_volume(cls, volume_id: uuid.UUID, session: Session) -> List[Page]:
@@ -167,6 +174,6 @@ class Page(Base, Timestamp):
         first_num = int(name[1:7])
         end_num = int(name[8:11])
         if end_num > 0:
-            self.page_num = str(first_num) + "-" + str(end_num)
+            self.label = str(first_num) + "-" + str(end_num)
         else:
-            self.page_num = str(first_num)
+            self.label = str(first_num)
