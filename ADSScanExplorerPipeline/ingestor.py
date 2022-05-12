@@ -95,25 +95,24 @@ def parse_image_files(image_path: str, journal_volume: JournalVolume, session: S
             #TODO possibly log this somewhere
             continue
 
-        img = Image.open(os.path.join(image_path, filename))
-        meta_dict = {TAGS[key] : img.tag[key] for key in img.tag_v2}
-        width = meta_dict["ImageWidth"][0]
-        height = meta_dict["ImageLength"][0]
+        with Image.open(os.path.join(image_path, filename)) as img:
+            meta_dict = {TAGS[key] : img.tag[key] for key in img.tag_v2}
+            width = meta_dict["ImageWidth"][0]
+            height = meta_dict["ImageLength"][0]
 
-        if filename.endswith(".tif"):
-            n_samples = len(meta_dict["BitsPerSample"])
-            #The tiff images are either color if having 3 channels or greyscale if only 1 channel
-            if n_samples > 1:
-                color = PageColor.Color
+            if filename.endswith(".tif"):
+                n_samples = len(meta_dict["BitsPerSample"])
+                #The tiff images are either color if having 3 channels or greyscale if only 1 channel
+                if n_samples > 1:
+                    color = PageColor.Color
+                else:
+                    color = PageColor.Greyscale
+                page.color_type = color
+                page.width = width
+                page.height = height
             else:
-                color = PageColor.Greyscale
-            page.color_type = color
-            page.width = width
-            page.height = height
-        else:
-            page.width = width
-            page.height = height
-        img.close()
+                page.width = width
+                page.height = height
         yield page
 
 def upload_image_files(image_path: str, vol: JournalVolume, session: Session):
