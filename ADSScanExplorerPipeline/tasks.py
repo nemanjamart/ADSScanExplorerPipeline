@@ -2,7 +2,7 @@
 import os
 import uuid
 from ADSScanExplorerPipeline.models import JournalVolume, VolumeStatus
-from ADSScanExplorerPipeline.ingestor import parse_top_file, parse_dat_file, parse_image_files, identify_journals, upload_image_files, check_all_image_files_exists
+from ADSScanExplorerPipeline.ingestor import parse_top_file, parse_dat_file, parse_image_files, identify_journals, upload_image_files, check_all_image_files_exists, set_ingestion_error_status
 from kombu import Queue
 import ADSScanExplorerPipeline.app as app_module
 # import adsmsg
@@ -55,20 +55,18 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
 
             for page in parse_image_files(image_path, vol, session):
                 session.add(page)
+
+            vol.status = VolumeStatus.Db_done
+            
             if upload_files:
                 task_upload_image_files_for_volume.delay(base_path, vol.id)
+                task_index_ocr_files_for_volume.delay(base_path, vol.id)
             
-            vol.status = VolumeStatus.Done
         except Exception as e:
             session.rollback()
             logger.error("Failed to process journal_volume_id: %s due to: %s", str(journal_volume_id), e)
-            try:
-                journal_volume = JournalVolume.get_from_id_or_name(journal_volume_id, session)
-                journal_volume.status = VolumeStatus.Error
-                session.add(journal_volume)
-                session.commit()
-            except Exception as e2:
-                logger.error("Failed setting error on volume: %s due to: %s", str(journal_volume_id), e2)
+            set_ingestion_error_status(session, journal_volume_id, e)
+
         else:
             session.commit()
     return session
@@ -82,9 +80,13 @@ def task_upload_image_files_for_volume(base_path: str, journal_volume_id: str):
             image_path = os.path.join(base_path, "bitmaps", vol.type, vol.journal, vol.volume, "600")
             check_all_image_files_exists(image_path, vol, session)
             upload_image_files(image_path, vol, session)
+            vol.status = VolumeStatus.Bucket_done
+            session.add(vol)
         except Exception as e:
             session.rollback()
             logger.error("Failed to upload images from journal_volume_id: %s due to: %s", str(journal_volume_id), e)
+            set_ingestion_error_status(session, journal_volume_id, e)
+    return session
 
 @app.task(queue='investigate-new-volumes')
 def task_investigate_new_volumes(base_path: str, upload_files: bool = False, process = True):

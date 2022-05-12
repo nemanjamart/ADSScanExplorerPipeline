@@ -18,8 +18,10 @@ class VolumeStatus(enum.Enum):
     New = 1
     Processing = 2
     Update = 3
-    Done = 4
-    Error = 5
+    Db_done = 4
+    Bucket_done = 5
+    Done = 6
+    Error = 7
 
 class PageColor(enum.Enum):
     """Page Color Type"""
@@ -60,6 +62,7 @@ class JournalVolume(Base, Timestamp):
     volume = Column(String)
     type = Column(String)
     status = Column(Enum(VolumeStatus))
+    status_message = Column(String)
     file_hash = Column(String)
 
     UniqueConstraint(journal, volume)

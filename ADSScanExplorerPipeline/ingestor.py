@@ -2,7 +2,7 @@ import re
 import os
 from hashlib import md5
 from typing import Iterable
-from ADSScanExplorerPipeline.models import JournalVolume, Page, Article, PageColor
+from ADSScanExplorerPipeline.models import JournalVolume, Page, Article, PageColor, VolumeStatus
 from ADSScanExplorerPipeline.exceptions import MissingImageFileException
 from sqlalchemy.orm import Session
 from PIL import Image
@@ -178,3 +178,16 @@ def hash_volume(base_path: str, vol: JournalVolume) -> str:
 
     #TODO include OCR
     return vol_hash
+
+def set_ingestion_error_status(session: Session, journal_volume_id: str, error_msg: str):
+    """
+    Sets error status and error message on the failed volume
+    """
+    try:
+        journal_volume = JournalVolume.get_from_id_or_name(journal_volume_id, session)
+        journal_volume.status = VolumeStatus.Error
+        journal_volume.status_message = error_msg
+        session.add(journal_volume)
+        session.commit()
+    except Exception as e:
+        logger.error("Failed setting error on volume: %s due to: %s", str(journal_volume_id), e)
