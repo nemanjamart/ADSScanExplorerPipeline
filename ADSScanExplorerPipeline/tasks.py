@@ -44,6 +44,7 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
             top_file_path = os.path.join(base_path, "lists", vol.type, vol.journal, top_filename)
             dat_file_path = top_file_path.replace(".top", ".dat")
             image_path = os.path.join(base_path, "bitmaps", vol.type, vol.journal, vol.volume, "600")
+
             for page in parse_top_file(top_file_path, vol, session):
                 session.add(page)
 
@@ -55,8 +56,8 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
             for page in parse_image_files(image_path, vol, session):
                 session.add(page)
             if upload_files:
-                upload_image_files(image_path, vol, session)
-                #TODO possibly upload OCR files as well
+                task_upload_image_files_for_volume.delay(base_path, vol.id)
+            
             vol.status = VolumeStatus.Done
         except Exception as e:
             session.rollback()
@@ -71,6 +72,19 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
         else:
             session.commit()
     return session
+
+@app.task(queue='process-volume')
+def task_upload_image_files_for_volume(base_path: str, journal_volume_id: str):
+    with app.session_scope() as session:
+        vol = None
+        try:
+            vol = JournalVolume.get_from_id_or_name(journal_volume_id, session)
+            image_path = os.path.join(base_path, "bitmaps", vol.type, vol.journal, vol.volume, "600")
+            check_all_image_files_exists(image_path, vol, session)
+            upload_image_files(image_path, vol, session)
+        except Exception as e:
+            session.rollback()
+            logger.error("Failed to upload images from journal_volume_id: %s due to: %s", str(journal_volume_id), e)
 
 @app.task(queue='investigate-new-volumes')
 def task_investigate_new_volumes(base_path: str, upload_files: bool = False, process = True):
