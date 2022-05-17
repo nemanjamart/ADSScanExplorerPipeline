@@ -27,6 +27,7 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
     Processes a journal volume
     """
     logger.info("Processing journal_volume id: %s", journal_volume_id)
+    error_msg = ""  
     with app.session_scope() as session:
         vol = None
         try:
@@ -57,22 +58,22 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
                 session.add(page)
 
             vol.status = VolumeStatus.Db_done
-            
-            if upload_files:
-                task_upload_image_files_for_volume.delay(base_path, vol.id)
-                task_index_ocr_files_for_volume.delay(base_path, vol.id)
+            session.add(vol)
             
         except Exception as e:
             session.rollback()
             logger.error("Failed to process journal_volume_id: %s due to: %s", str(journal_volume_id), e)
-            set_ingestion_error_status(session, journal_volume_id, e)
-
-        else:
-            session.commit()
+            error_msg = str(e)
+    if error_msg != "":
+        set_ingestion_error_status(session, journal_volume_id, error_msg)
+        return
+    if upload_files:
+        task_upload_image_files_for_volume.delay(base_path, journal_volume_id)
     return session
 
 @app.task(queue='process-volume')
 def task_upload_image_files_for_volume(base_path: str, journal_volume_id: str):
+    error_msg = ""
     with app.session_scope() as session:
         vol = None
         try:
@@ -81,11 +82,14 @@ def task_upload_image_files_for_volume(base_path: str, journal_volume_id: str):
             check_all_image_files_exists(image_path, vol, session)
             upload_image_files(image_path, vol, session)
             vol.status = VolumeStatus.Bucket_done
+            vol.status_message = None
             session.add(vol)
         except Exception as e:
             session.rollback()
             logger.error("Failed to upload images from journal_volume_id: %s due to: %s", str(journal_volume_id), e)
-            set_ingestion_error_status(session, journal_volume_id, e)
+            error_msg = str(e)
+    if error_msg != "":
+        set_ingestion_error_status(session, journal_volume_id, error_msg)
     return session
 
 @app.task(queue='investigate-new-volumes')
