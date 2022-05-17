@@ -219,7 +219,12 @@ def hash_volume(base_path: str, vol: JournalVolume) -> str:
         modified_time = os.path.getmtime(file_path)
         vol_hash = md5((vol_hash + str(modified_time)).encode("utf-8")).hexdigest()
 
-    #TODO include OCR
+    ocr_path = os.path.join(base_path, "ocr" ,vol.type, vol.journal, vol.volume)
+    for file in os.listdir(ocr_path):
+        file_path = os.path.join(ocr_path, file)
+        modified_time = os.path.getmtime(file_path)
+        vol_hash = md5((vol_hash + str(modified_time)).encode("utf-8")).hexdigest()
+        
     return vol_hash
 
 def set_ingestion_error_status(session: Session, journal_volume_id: str, error_msg: str):
