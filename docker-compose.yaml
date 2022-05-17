@@ -1,0 +1,25 @@
+version: '3.1'
+networks:
+  outside:
+    external:
+      name: ads_scan_explorer_pipeline_network
+services:
+  ads_scan_explorer_pipeline:
+    build: .
+    image: ads_scan_explorer_pipeline:latest
+    container_name: ads_scan_explorer_pipeline
+    volumes:
+    - ./:/app
+    - /Users/mattiasw/Work/ADS/ADS_scans_sample/:/opt/ADS_scans_sample
+    entrypoint: celery -A ADSScanExplorerPipeline.tasks worker
+    environment:
+      - SQLALCHEMY_URL='postgres://scan_explorer:scan_explorer@postgres:5432/scan_explorer_pipeline'
+      # When 'True', no events are emitted to the broker via the webhook
+      - TESTING_MODE=True
+      # When 'True', it converts all the asynchronous calls into synchronous,
+      # thus no need for rabbitmq, it does not forward to master
+      # and it allows debuggers to run if needed:
+      - CELERY_ALWAYS_EAGER=True
+      - CELERY_EAGER_PROPAGATES_EXCEPTIONS=True
+    networks:
+      - outside
