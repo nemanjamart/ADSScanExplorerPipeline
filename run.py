@@ -28,6 +28,12 @@ if __name__ == '__main__':
                     default="False",
                     type=str,
                     help="If image files should be uploaded to the s3 bucket")
+    parser.add_argument("--index-ocr",
+                    dest="ocr",
+                    required=False,
+                    default="False",
+                    type=str,
+                    help="If ocr files should be index on elasticsearch")
     subparsers = parser.add_subparsers(help='commands', dest="action")
     subparsers.add_parser('NEW', help='Loops through input folder and processes all new or updated volumes')
     subparsers.add_parser('ERROR', help='Process all volumes which have encountered errors in previous ingestions')
@@ -51,14 +57,17 @@ if __name__ == '__main__':
         upload = False 
         if bool(strtobool(args.upload)):
             upload = True
+        ocr = False 
+        if bool(strtobool(args.ocr)):
+            ocr = True
         
         if args.action == "NEW":
             logger.info("Process all new volumes in: %s", input_folder)
-            task_investigate_new_volumes.delay(input_folder, upload)
+            task_investigate_new_volumes.delay(input_folder, upload, ocr)
         elif args.action == "ERROR":
             logger.info("Process all volumes with previous errors in: %s", input_folder)
             task_rerun_error_volumes.delay(input_folder, upload)
         elif args.action == "SINGLE":
             for id in args.ids:
                 logger.info("Process volume: %s in: %s", id, input_folder)
-                task_process_volume.delay(input_folder, id, upload)
+                task_process_volume.delay(input_folder, id, upload, ocr)

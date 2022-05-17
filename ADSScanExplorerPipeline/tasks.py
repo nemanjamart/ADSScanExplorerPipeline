@@ -2,7 +2,7 @@
 import os
 import uuid
 from ADSScanExplorerPipeline.models import JournalVolume, VolumeStatus
-from ADSScanExplorerPipeline.ingestor import parse_top_file, parse_dat_file, parse_image_files, identify_journals, upload_image_files, check_all_image_files_exists, set_ingestion_error_status
+from ADSScanExplorerPipeline.ingestor import parse_top_file, parse_dat_file, parse_image_files, identify_journals, upload_image_files, check_all_image_files_exists, index_ocr_files, set_ingestion_error_status
 from kombu import Queue
 import ADSScanExplorerPipeline.app as app_module
 # import adsmsg
@@ -22,7 +22,7 @@ app.conf.CELERY_QUEUES = (
 # ============================= TASKS ============================================= #
 
 @app.task(queue='process-volume')
-def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bool = False):
+def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bool = False, index_ocr: bool = False):
     """
     Processes a journal volume
     """
@@ -69,6 +69,8 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
         return
     if upload_files:
         task_upload_image_files_for_volume.delay(base_path, journal_volume_id)
+    if index_ocr:
+        task_index_ocr_files_for_volume.delay(base_path, journal_volume_id)
     return session
 
 @app.task(queue='process-volume')
@@ -92,8 +94,29 @@ def task_upload_image_files_for_volume(base_path: str, journal_volume_id: str):
         set_ingestion_error_status(session, journal_volume_id, error_msg)
     return session
 
+@app.task(queue='process-volume')
+def task_index_ocr_files_for_volume(base_path: str, journal_volume_id: str):
+    error_msg = ""
+    with app.session_scope() as session:
+        vol = None
+        try:
+            vol = JournalVolume.get_from_id_or_name(journal_volume_id, session)
+            ocr_path = os.path.join(base_path, "ocr", vol.type, vol.journal, vol.volume)
+            index_ocr_files(ocr_path, vol, session)
+            logger.error("Test")
+            vol.status = VolumeStatus.Done
+            vol.status_message = None
+            session.add(vol)
+        except Exception as e:
+            session.rollback()
+            logger.error("Failed to index ocr files from journal_volume_id: %s due to: %s", str(journal_volume_id), e)
+            error_msg = str(e)
+    if error_msg != "":
+        set_ingestion_error_status(session, journal_volume_id, error_msg)
+    return session
+
 @app.task(queue='investigate-new-volumes')
-def task_investigate_new_volumes(base_path: str, upload_files: bool = False, process = True):
+def task_investigate_new_volumes(base_path: str, upload_files: bool = False, index_ocr: bool = False, process: bool = True):
     """
     Investigate if any new or updated volumes exists
     """
@@ -115,7 +138,7 @@ def task_investigate_new_volumes(base_path: str, upload_files: bool = False, pro
                 session.commit()
                 vol_to_process = vol.id
         if vol_to_process and process:
-            task_process_volume.delay(base_path, vol_to_process, upload_files)
+            task_process_volume.delay(base_path, vol_to_process, upload_files, index_ocr)
     return session
 
 @app.task(queue='rerun_error_volumes')

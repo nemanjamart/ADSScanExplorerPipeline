@@ -1,9 +1,11 @@
 import re
 import os
+import html
 from hashlib import md5
 from typing import Iterable
 from ADSScanExplorerPipeline.models import JournalVolume, Page, Article, PageColor, VolumeStatus
 from ADSScanExplorerPipeline.exceptions import MissingImageFileException
+import elasticsearch
 from sqlalchemy.orm import Session
 from PIL import Image
 from PIL.TiffTags import TAGS
@@ -134,6 +136,47 @@ def upload_image_files(image_path: str, vol: JournalVolume, session: Session):
         s3_file_path = os.path.join("bitmaps", vol.type, vol.journal.replace(".","_"), vol.volume, "600", filename)
         s3_bucket.upload_file(file_path, s3_file_path)
 
+def index_ocr_files(ocr_path: str, vol: JournalVolume, session: Session):
+    """
+    Loops through all ocr files to the volume and adds them to an Elastic Search index.
+    """
+    logger.error("Test")
+
+    es = elasticsearch.Elasticsearch(config.get("ELASTIC_SEARCH_URL", ""))
+    logger.error("Test")
+    query ={
+        "query":{
+            "term": {
+                "volume_id": {
+                    "value": vol.id
+                }
+             }
+        }
+    }
+    logger.error("Test")
+    es.delete_by_query(index=config.get("ELASTIC_SEARCH_INDEX", ""), body=query)
+    logger.error(ocr_path)
+    ocr_list = os.listdir(ocr_path)
+    logger.error(ocr_list)
+    for page in Page.get_all_from_volume(vol.id, session):
+        logger.error(page.id)
+        ocr_filename = page.name + ".txt"
+        if ocr_filename not in ocr_list:
+            logger.info("Missing ocr file " + page.name)
+            continue
+        with open(os.path.join(ocr_path, ocr_filename)) as file:
+            articles = []
+            for article in page.articles:
+                articles.append({'id': article.id})
+            doc = {
+                'page_id': page.id,
+                'volume_id': vol.id,
+                'text':  html.unescape(file.read()),
+                'articles': articles
+            }
+            logger.error(doc)
+            es.index(index=config.get("ELASTIC_SEARCH_INDEX", ""), document=doc)
+            logger.error("indexed")
         
 def identify_journals(input_folder_path : str) -> Iterable[JournalVolume]:
     """
