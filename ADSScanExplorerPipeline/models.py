@@ -165,7 +165,7 @@ class Page(Base, Timestamp):
         MNNNNNNSEEE
 
         The first position (M) is just 0 in most cases, but can be used as a modifier for specific cases (see the second table below).
-        The next 6 positions are a number left padded with zeros. The 8th position is a separator; a period in many cases and other cases
+        The next 6 positions are a number left padded with zeros. The 8 h position is a separator; a period in many cases and other cases
         are explained in the first table below. The final 3 positions provide a means for further distinction; in many cases these are
         just 3 zeros, with special cases listed in the second table."""
 
@@ -179,4 +179,6 @@ class Page(Base, Timestamp):
         if end_num > 0:
             self.label = str(first_num) + "-" + str(end_num)
         else:
-            self.label = str(first_num)
+                self.label = str(first_num)
+        if name[0] != "0":
+                self.label = name[0] + "-" + self.label

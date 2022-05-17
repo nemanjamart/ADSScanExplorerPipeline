@@ -40,8 +40,9 @@ def parse_top_file(file_path: str, journal_volume: JournalVolume, session: Sessi
             page = Page.get_or_create(name, journal_volume.id, session)
             page.volume_running_page_num = running_page_num
             if len(line_split) > 1:
-                page_num = line_split[1]
-                page.label = page_num
+                page_label = line_split[1]
+                if not page_label.isspace() and len(page_label) > 0:
+                    page.label = page_label
             yield page
 
 def parse_dat_file(file_path: str, journal_volume: JournalVolume, session: Session):
