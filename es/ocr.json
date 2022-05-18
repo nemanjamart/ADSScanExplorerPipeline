@@ -1,37 +1,22 @@
 {
-  "mappings": {
+  "properties": {
+    "text": {
+      "type": "text"
+    },
+    "page_id": {
+      "type": "keyword"
+    },
+    "volume_id": {
+      "type": "keyword"
+    },
+    "articles": {
       "properties": {
-        "text": {
-          "type": "text"
-        },
-        "page_id": {
+        "id": {
           "type": "keyword"
-        },
-        "volume_id": {
-          "type": "keyword"
-        },
-        "articles": {
-          "properties": {
-            "id": {
-              "type": "keyword"
-            }
-          },
-          "type": "nested"
         }
       },
-      "dynamic": false
-    },
-    "settings": {
-      "analysis": {
-        "analyzer": {
-          "text_analyzer": {
-            "tokenizer": "standard",
-            "filter": [
-              "lowercase",
-              "asciifolding"
-            ]
-          }
-        }
-      }
+      "type": "nested"
     }
+  },
+  "dynamic": false
 }
