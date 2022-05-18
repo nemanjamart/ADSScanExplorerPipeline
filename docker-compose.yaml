@@ -1,10 +1,10 @@
 version: '3.1'
 networks:
-  outside:
-    external:
-      name: ads_scan_explorer_pipeline_network
+  ads_scan_explorer_network:
+      name: ads_scan_explorer_network
+      driver: bridge
 services:
-  ads_scan_explorer_pipeline:
+  ads_scan_explorer:
     build: .
     image: ads_scan_explorer_pipeline:latest
     container_name: ads_scan_explorer_pipeline
@@ -22,4 +22,4 @@ services:
       - CELERY_ALWAYS_EAGER=True
       - CELERY_EAGER_PROPAGATES_EXCEPTIONS=True
     networks:
-      - outside
+      - ads_scan_explorer_network
