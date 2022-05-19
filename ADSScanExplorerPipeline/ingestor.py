@@ -140,10 +140,8 @@ def index_ocr_files(ocr_path: str, vol: JournalVolume, session: Session):
     """
     Loops through all ocr files to the volume and adds them to an Elastic Search index.
     """
-    logger.error("Test")
 
     es = elasticsearch.Elasticsearch(config.get("ELASTIC_SEARCH_URL", ""))
-    logger.error("Test")
     query ={
         "query":{
             "term": {
@@ -153,13 +151,9 @@ def index_ocr_files(ocr_path: str, vol: JournalVolume, session: Session):
              }
         }
     }
-    logger.error("Test")
     es.delete_by_query(index=config.get("ELASTIC_SEARCH_INDEX", ""), body=query)
-    logger.error(ocr_path)
     ocr_list = os.listdir(ocr_path)
-    logger.error(ocr_list)
     for page in Page.get_all_from_volume(vol.id, session):
-        logger.error(page.id)
         ocr_filename = page.name + ".txt"
         if ocr_filename not in ocr_list:
             logger.info("Missing ocr file " + page.name)
@@ -174,9 +168,7 @@ def index_ocr_files(ocr_path: str, vol: JournalVolume, session: Session):
                 'text':  html.unescape(file.read()),
                 'articles': articles
             }
-            logger.error(doc)
             es.index(index=config.get("ELASTIC_SEARCH_INDEX", ""), document=doc)
-            logger.error("indexed")
         
 def identify_journals(input_folder_path : str) -> Iterable[JournalVolume]:
     """
