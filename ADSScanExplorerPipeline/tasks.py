@@ -75,6 +75,7 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
 @app.task(queue='process-volume')
 def task_upload_image_files_for_volume(base_path: str, journal_volume_id: str):
     error_msg = ""
+    logger.info("Uploading images files for volume %s", journal_volume_id)
     with app.session_scope() as session:
         vol = None
         try:
@@ -96,6 +97,8 @@ def task_upload_image_files_for_volume(base_path: str, journal_volume_id: str):
 @app.task(queue='process-volume')
 def task_index_ocr_files_for_volume(base_path: str, journal_volume_id: str):
     error_msg = ""
+    logger.info("Indexing ocr files for volume %s", journal_volume_id)
+
     with app.session_scope() as session:
         vol = None
         try:
