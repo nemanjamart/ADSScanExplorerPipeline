@@ -3,7 +3,7 @@ import os
 import unittest
 from unittest.mock import patch, Mock
 from alchemy_mock.mocking import UnifiedAlchemyMagicMock
-from ADSScanExplorerPipeline.tasks import task_investigate_new_volumes, task_process_volume, task_upload_image_files_for_volume, task_index_ocr_files_for_volume
+from ADSScanExplorerPipeline.tasks import task_process_new_volumes, task_process_volume, task_upload_image_files_for_volume, task_index_ocr_files_for_volume
 from ADSScanExplorerPipeline.models import JournalVolume, VolumeStatus, Page, PageColor, PageType, Article
 from moto import mock_s3
 import boto3
@@ -14,10 +14,10 @@ class TestModels(unittest.TestCase):
     data_folder = os.path.join(test_home, "tests/data/")
 
     @patch('ADSScanExplorerPipeline.app.ADSScanExplorerPipeline.session_scope')
-    def test_task_investigate_new_volumes(self, session_scope):
+    def test_task_process_new_volumes(self, session_scope):
         session = UnifiedAlchemyMagicMock()
         session_scope.return_value = session
-        used_session = task_investigate_new_volumes(self.data_folder, upload_files = False, process=False)
+        used_session = task_process_new_volumes(self.data_folder, upload_files = False, process=False)
         self.assertEqual(len(used_session.query(JournalVolume).filter().all()), 1)
         for vol in used_session.query(JournalVolume).filter(JournalVolume.journal == "").all():
             self.assertEqual(vol.type, "seri")

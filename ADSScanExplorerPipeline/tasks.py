@@ -15,8 +15,7 @@ logger = app.logger
 
 app.conf.CELERY_QUEUES = (
     Queue('process-volume', app.exchange, routing_key='process-volume'),
-    Queue('investigate-new-volumes', app.exchange, routing_key='investigate-new-volumes'),
-    Queue('rerun_error_volumes', app.exchange, routing_key='rerun_error_volumes'),
+    Queue('process-new-volumes', app.exchange, routing_key='investigate-new-volumes'),
 )
 
 # ============================= TASKS ============================================= #
@@ -103,7 +102,6 @@ def task_index_ocr_files_for_volume(base_path: str, journal_volume_id: str):
             vol = JournalVolume.get_from_id_or_name(journal_volume_id, session)
             ocr_path = os.path.join(base_path, "ocr", vol.type, vol.journal, vol.volume)
             index_ocr_files(ocr_path, vol, session)
-            logger.error("Test")
             vol.status = VolumeStatus.Done
             vol.status_message = None
             session.add(vol)
@@ -115,43 +113,31 @@ def task_index_ocr_files_for_volume(base_path: str, journal_volume_id: str):
         set_ingestion_error_status(session, journal_volume_id, error_msg)
     return session
 
-@app.task(queue='investigate-new-volumes')
-def task_investigate_new_volumes(base_path: str, upload_files: bool = False, index_ocr: bool = False, process: bool = True):
+@app.task(queue='process-new-volumes')
+def task_process_new_volumes(base_path: str, upload_files: bool = False, index_ocr: bool = False, process: bool = True):
     """
-    Investigate if any new or updated volumes exists
+    Investigate if any new or updated volumes exists and process them if process flag is set to True
     """
     logger.info("Investigating new or changed volumes in %s", base_path)
-    for vol in identify_journals(base_path):
-        vol_to_process  = None
-        with app.session_scope() as session:
+    volumes_to_process = []
+    with app.session_scope() as session:
+        for vol in identify_journals(base_path):
             existing_vol = JournalVolume.get_from_obj(vol, session)
             if existing_vol:
                 if vol.file_hash != existing_vol.file_hash:
                         existing_vol.status = VolumeStatus.Update
                         existing_vol.file_hash = vol.file_hash
                         session.add(existing_vol)
-                        session.commit()
-                        vol_to_process = existing_vol.id
             else:
                 vol.status = VolumeStatus.New
                 session.add(vol)
-                session.commit()
-                vol_to_process = vol.id
-        if vol_to_process and process:
-            task_process_volume.delay(base_path, vol_to_process, upload_files, index_ocr)
-    return session
-
-@app.task(queue='rerun_error_volumes')
-def task_rerun_error_volumes(base_path: str, upload_files: bool = False):
-    """
-    Rerun all journal volumes with status 'Error'
-    """
-    volumes_to_process = []
-    with app.session_scope() as session:
-        for vol in JournalVolume.get_errors(session):
+                
+        for vol in JournalVolume.get_to_be_processed(session):
             volumes_to_process.append(vol.id)
-    for vol_id in volumes_to_process:
-        task_process_volume.delay(base_path, vol_id, upload_files)
+    if process:
+        for vol_id in volumes_to_process:
+            task_process_volume.delay(base_path, vol_id, upload_files, index_ocr)
+    return session
 
 if __name__ == '__main__':
     app.start()

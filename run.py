@@ -2,7 +2,7 @@
 import os
 import argparse
 from distutils.util import strtobool
-from ADSScanExplorerPipeline.tasks import task_investigate_new_volumes, task_rerun_error_volumes, task_process_volume
+from ADSScanExplorerPipeline.tasks import task_process_new_volumes, task_process_volume
 
 # ============================= INITIALIZATION ==================================== #
 
@@ -34,10 +34,18 @@ if __name__ == '__main__':
                     default="False",
                     type=str,
                     help="If ocr files should be index on elasticsearch")
+
     subparsers = parser.add_subparsers(help='commands', dest="action")
-    subparsers.add_parser('NEW', help='Loops through input folder and processes all new or updated volumes')
-    subparsers.add_parser('ERROR', help='Process all volumes which have encountered errors in previous ingestions')
+    new_parser = subparsers.add_parser('NEW', help='Loops through input folder and processes all new or updated volumes')
     run_parser = subparsers.add_parser('SINGLE', help='Process single volume')
+    
+    new_parser.add_argument("--process",
+                dest="process",
+                required=False,
+                default="True",
+                type=str,
+                help="If detected volumes should be processed")
+
     run_parser.add_argument('--id',
                         dest='ids',
                         nargs='+',
@@ -62,11 +70,11 @@ if __name__ == '__main__':
             ocr = True
         
         if args.action == "NEW":
+            process = False 
+            if bool(strtobool(args.process)):
+                process = True
             logger.info("Process all new volumes in: %s", input_folder)
-            task_investigate_new_volumes.delay(input_folder, upload, ocr)
-        elif args.action == "ERROR":
-            logger.info("Process all volumes with previous errors in: %s", input_folder)
-            task_rerun_error_volumes.delay(input_folder, upload)
+            task_process_new_volumes.delay(input_folder, upload, ocr, process)
         elif args.action == "SINGLE":
             for id in args.ids:
                 logger.info("Process volume: %s in: %s", id, input_folder)
