@@ -122,7 +122,10 @@ def upload_image_files(image_path: str, vol: JournalVolume, session: Session):
     """
     Uploads all image files which have been associated with a page in the volume to a s3 bucket defined in config
     """
-    s3_bucket = boto3.resource("s3").Bucket(config.get('S3_BUCKET', ""))
+    s3_bucket = boto3.resource("s3",\
+        aws_access_key_id=config.get("S3_BUCKET_ACCESS_KEY", ""),\
+        aws_secret_access_key=config.get("S3_BUCKET_SECRET_KEY", ""))\
+            .Bucket(config.get('S3_BUCKET', ""))
     for filename in os.listdir(image_path):
         if filename.endswith(".png") or filename.endswith(".jpg"):
             continue

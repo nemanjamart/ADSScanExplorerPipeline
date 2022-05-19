@@ -9,6 +9,8 @@ OUTPUT_CELERY_BROKER = 'pyamqp://user:password@localhost:5672/master_pipeline'
 OUTPUT_TASKNAME = 'adsmp.tasks.task_update_record'
 
 S3_BUCKET = 'scan-explorer'
+S3_BUCKET_ACCESS_KEY = 'CHANGE_ME'
+S3_BUCKET_SECRET_KEY = 'CHANGE_ME'
 ELASTIC_SEARCH_URL = 'http://localhost:9200'
 ELASTIC_SEARCH_INDEX = 'scan-explorer'
 SQLALCHEMY_URL = 'postgres://scan_explorer:scan_explorer@localhost:5432/scan_explorer_pipeline'
