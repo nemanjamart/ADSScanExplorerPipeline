@@ -14,7 +14,7 @@ The pipeline loops through the input folder structure identifying journal volume
 
 ### Pipeline
 
-Start with setting up the pipeline container. Make sure to set the input folder (with all image files, top files and ocr files) under volumes in the docker-compose.yaml. This will mount the folder into the container making it accessible to run the pipeline. 
+Start with setting up the pipeline container. Make sure to set the input folder (with all image files, top files and ocr files) under volumes in the docker-compose.yaml. This will mount the folder into the container making it accessible to run the pipeline. Also make sure to set the S3 Bucket keys in the config.py file.
 ```
 docker compose -f docker-compose.yaml up -d
 ```
@@ -67,5 +67,5 @@ docker exec -it ads_scan_explorer_pipeline python run.py --input-folder=/opt/ADS
 
 Process a single or multiple volumes by id. Will be processed/reprocessed disregarding previous status. Id is either volume id (uuid) or journal + volume. Multiple ids can be input comma separated
 ```
-docker exec -it ads_scan_explorer_pipeline python run.py --input-folder=/opt/ADS_scans_sample/ --upload-files=y --index-ocr=y SINGLE --id=phae.17500,c949f56b-cef6-43ea-b34c-cf5cc1bcdd41
+docker exec -it ads_scan_explorer_pipeline python run.py --input-folder=/opt/ADS_scans_sample/ --upload-files=y --index-ocr=y SINGLE --id=lls..1969,c949f56b-cef6-43ea-b34c-cf5cc1bcdd41
 ```
