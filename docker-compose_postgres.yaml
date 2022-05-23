@@ -1,0 +1,15 @@
+version: '3.1'
+networks:
+  ads_scan_explorer_network:
+      name: ads_scan_explorer_network
+services:
+  postgres:
+    image: postgres:14.2
+    container_name: postgres
+    environment:
+      - "POSTGRES_USER=root"
+      - "POSTGRES_PASSWORD=root"
+    ports:
+      - "5432:5432"
+    networks:
+      - ads_scan_explorer_network

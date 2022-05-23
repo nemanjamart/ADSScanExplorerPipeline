@@ -38,7 +38,7 @@ docker exec -it ads_scan_explorer_pipeline python setup_es.py
 ### Database
 Setup a postgresql container
 ```
-docker compose -f docker-compose_es.yaml up -d
+docker compose -f docker-compose_postgres.yaml up -d
 ```
 
 Prepare the database:
