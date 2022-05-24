@@ -51,7 +51,7 @@ docker exec -it postgres bash -c "psql -c \"GRANT CREATE ON DATABASE scan_explor
 
 Setup the tables by running through the pipeline container:
 ```
-docker exec -it ads_scan_explorer_pipeline python setup_db_.py 
+docker exec -it ads_scan_explorer_pipeline python setup_db.py 
 ```
 
 ## Usage
