@@ -132,7 +132,8 @@ def task_process_new_volumes(base_path: str, upload_files: bool = False, index_o
                         existing_vol.file_hash = vol.file_hash
                         session.add(existing_vol)
             else:
-                vol.status = VolumeStatus.New
+                if vol.status != VolumeStatus.Error:
+                    vol.status = VolumeStatus.New
                 session.add(vol)
                 
         for vol in JournalVolume.get_to_be_processed(session):

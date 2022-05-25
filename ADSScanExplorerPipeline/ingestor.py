@@ -190,7 +190,12 @@ def identify_journals(input_folder_path : str) -> Iterable[JournalVolume]:
                 if ".top" in file:
                     volume = parse_volume_from_top_file(file, journal)
                     vol = JournalVolume(type, journal, volume)
-                    vol.file_hash = hash_volume(input_folder_path, vol)
+                    try:
+                        vol.file_hash = hash_volume(input_folder_path, vol)
+                    except Exception as e:
+                        vol.status = VolumeStatus.Error
+                        vol.status_message = "Error checking file hash on top file: " +  os.path.join(journal_path,file) + " due to " + str(e)
+                        logger.error(vol.status_message)
                     yield vol
 
 def parse_volume_from_top_file(filename : str, journal : str):
