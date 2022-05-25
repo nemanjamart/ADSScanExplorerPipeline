@@ -161,15 +161,15 @@ def index_ocr_files(ocr_path: str, vol: JournalVolume, session: Session):
         if ocr_filename not in ocr_list:
             logger.info("Missing ocr file " + page.name)
             continue
-        with open(os.path.join(ocr_path, ocr_filename)) as file:
+        with open(os.path.join(ocr_path, ocr_filename)) as file:    
             articles = []
             for article in page.articles:
-                articles.append({'id': article.id})
+                articles.append(article.id)
             doc = {
                 'page_id': page.id,
                 'volume_id': vol.id,
                 'text':  html.unescape(file.read()),
-                'articles': articles
+                'article_ids': articles
             }
             es.index(index=config.get("ELASTIC_SEARCH_INDEX", ""), document=doc)
         

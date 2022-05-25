@@ -9,13 +9,8 @@
     "volume_id": {
       "type": "keyword"
     },
-    "articles": {
-      "properties": {
-        "id": {
-          "type": "keyword"
-        }
-      },
-      "type": "nested"
+    "article_ids": {
+      "type": "keyword"
     }
   },
   "dynamic": false
