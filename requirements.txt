@@ -5,4 +5,4 @@ SQLAlchemy-Utils==0.38.2
 psycopg2-binary==2.9.3
 boto3==1.22.13
 Pillow==9.0.1
-elasticsearch==8.2.0
+opensearch-py==2.0.0

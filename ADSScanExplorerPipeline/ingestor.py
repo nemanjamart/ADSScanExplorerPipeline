@@ -5,7 +5,7 @@ from hashlib import md5
 from typing import Iterable
 from ADSScanExplorerPipeline.models import JournalVolume, Page, Article, PageColor, VolumeStatus
 from ADSScanExplorerPipeline.exceptions import MissingImageFileException
-import elasticsearch
+from opensearchpy import OpenSearch
 from sqlalchemy.orm import Session
 from PIL import Image
 from PIL.TiffTags import TAGS
@@ -141,10 +141,10 @@ def upload_image_files(image_path: str, vol: JournalVolume, session: Session):
 
 def index_ocr_files(ocr_path: str, vol: JournalVolume, session: Session):
     """
-    Loops through all ocr files to the volume and adds them to an Elastic Search index.
+    Loops through all ocr files to the volume and adds them to an Open Search index.
     """
 
-    es = elasticsearch.Elasticsearch(config.get("ELASTIC_SEARCH_URL", ""))
+    opensearch = OpenSearch(config.get("OPEN_SEARCH_URL", ""))
     query ={
         "query":{
             "term": {
@@ -154,7 +154,7 @@ def index_ocr_files(ocr_path: str, vol: JournalVolume, session: Session):
              }
         }
     }
-    es.delete_by_query(index=config.get("ELASTIC_SEARCH_INDEX", ""), body=query)
+    opensearch.delete_by_query(index=config.get("OPEN_SEARCH_INDEX", ""), body=query)
     ocr_list = os.listdir(ocr_path)
     for page in Page.get_all_from_volume(vol.id, session):
         ocr_filename = page.name + ".txt"
@@ -171,7 +171,7 @@ def index_ocr_files(ocr_path: str, vol: JournalVolume, session: Session):
                 'text':  html.unescape(file.read()),
                 'article_ids': articles
             }
-            es.index(index=config.get("ELASTIC_SEARCH_INDEX", ""), document=doc)
+            opensearch.index(index=config.get("OPEN_SEARCH_INDEX", ""), body=doc)
         
 def identify_journals(input_folder_path : str) -> Iterable[JournalVolume]:
     """

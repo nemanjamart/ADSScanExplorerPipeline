@@ -11,8 +11,8 @@ OUTPUT_TASKNAME = 'adsmp.tasks.task_update_record'
 S3_BUCKET = 'scan-explorer'
 S3_BUCKET_ACCESS_KEY = 'CHANGE_ME'
 S3_BUCKET_SECRET_KEY = 'CHANGE_ME'
-ELASTIC_SEARCH_URL = 'http://localhost:9200'
-ELASTIC_SEARCH_INDEX = 'scan-explorer'
+OPEN_SEARCH_URL = 'http://opensearch-node1:9200'
+OPEN_SEARCH_INDEX = 'scan-explorer'
 SQLALCHEMY_URL = 'postgres://scan_explorer:scan_explorer@localhost:5432/scan_explorer_pipeline'
 SQLALCHEMY_ECHO = False
 # When 'True', no events are emitted to the broker via the webhook

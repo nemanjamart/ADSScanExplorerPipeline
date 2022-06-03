@@ -9,36 +9,36 @@ The pipeline loops through the input folder structure identifying journal volume
 ## Setup
 
 * The pipeline needs at at minimum a DB to run the baseline ingestion pipeline. 
-* An ElasticSearch instance is needed to index the associated OCR files
+* An OpenSearch instance is needed to index the associated OCR files
 * A S3 Bucket is needed to upload the actual image files
 
 ### Pipeline
 
 Start with setting up the pipeline container. Make sure to set the input folder (with all image files, top files and ocr files) under volumes in the docker-compose.yaml. This will mount the folder into the container making it accessible to run the pipeline. Also make sure to set the S3 Bucket keys in the config.py file.
 ```
-docker compose -f docker-compose.yaml up -d
+docker compose -f docker/pipeline/docker-compose.yaml up -d
 ```
 This will start a Celery instance. If running on a dev environment you could be running without a RabbitMQ backend with setting CELERY_ALWAYS_EAGER=True in config.py
 
 
-### Elastic Search
+### Open Search
 
-Setup up the Elastic Search docker container
+Setup up the Open Search docker container
 
 ```
-docker compose -f docker-compose_es.yaml up -d
+docker compose -f docker/os/docker-compose.yaml -f docker/os/{environment}.yaml up -d
 ```
 
 Setup the index by running through the pipeline container:
 
 ```
-docker exec -it ads_scan_explorer_pipeline python setup_es.py 
+docker exec -it ads_scan_explorer_pipeline python setup_os.py 
 ```
 
 ### Database
 Setup a postgresql container
 ```
-docker compose -f docker-compose_postgres.yaml up -d
+docker compose -f docker/postgres/docker-compose.yaml up -d
 ```
 
 Prepare the database:

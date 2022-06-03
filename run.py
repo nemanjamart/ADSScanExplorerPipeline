@@ -33,7 +33,7 @@ if __name__ == '__main__':
                     required=False,
                     default="False",
                     type=str,
-                    help="If ocr files should be index on elasticsearch")
+                    help="If ocr files should be index on opensearch")
 
     subparsers = parser.add_subparsers(help='commands', dest="action")
     new_parser = subparsers.add_parser('NEW', help='Loops through input folder and processes all new or updated volumes')

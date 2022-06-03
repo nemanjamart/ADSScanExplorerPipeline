@@ -4,13 +4,15 @@ networks:
       name: ads_scan_explorer_network
       driver: bridge
 services:
-  ads_scan_explorer:
-    build: .
-    image: ads_scan_explorer_pipeline:latest
+  ads_scan_explorer_pipeline:
     container_name: ads_scan_explorer_pipeline
+    build: 
+      context: ../../
+      dockerfile: ./docker/pipeline/Dockerfile
+    image: ads_scan_explorer_pipeline:latest
     volumes:
-    - ./:/app
-    - /Users/mattiasw/Work/ADS/ADS_scans_sample/:/opt/ADS_scans_sample
+    - ../../:/app
+    - /src/ADS_scans_sample/:/opt/ADS_scans_sample
     entrypoint: celery -A ADSScanExplorerPipeline.tasks worker
     environment:
       - SQLALCHEMY_URL='postgres://scan_explorer:scan_explorer@postgres:5432/scan_explorer_pipeline'

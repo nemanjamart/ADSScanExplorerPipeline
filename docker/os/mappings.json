@@ -1,0 +1,19 @@
+{
+  "mappings": {
+    "properties": {
+      "text": {
+        "type": "text"
+      },
+      "page_id": {
+        "type": "keyword"
+      },
+      "volume_id": {
+        "type": "keyword"
+      },
+      "article_ids": {
+        "type": "keyword"
+      }
+    },
+    "dynamic": false
+  }  
+}

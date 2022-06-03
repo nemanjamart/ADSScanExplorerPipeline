@@ -1,4 +1,4 @@
-from elasticsearch import Elasticsearch
+from opensearchpy import OpenSearch
 import json
 import argparse
 from adsputils import setup_logging, load_config
@@ -26,13 +26,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
 
-es = Elasticsearch(config.get("ELASTIC_SEARCH_URL", ""))
+opensearch = OpenSearch(config.get("OPEN_SEARCH_URL", ""))
 if bool(strtobool(args.delete)):
-    es.indices.delete(index = config.get("ELASTIC_SEARCH_INDEX", ""))
+    opensearch.indices.delete(index = config.get("OPEN_SEARCH_INDEX", ""))
 
-es_mapping_file = "./es/ocr.json"
+os_mapping_file = "./docker/os/mappings.json"
 
-with open(es_mapping_file, 'r') as f:
+with open(os_mapping_file, 'r') as f:
     index_dict = json.load(f)
-    es.indices.create(index = config.get("ELASTIC_SEARCH_INDEX", ""), mappings = index_dict)
-es.transport.close()
+    opensearch.indices.create(index = config.get("OPEN_SEARCH_INDEX", ""), body = index_dict)
+opensearch.transport.close()
