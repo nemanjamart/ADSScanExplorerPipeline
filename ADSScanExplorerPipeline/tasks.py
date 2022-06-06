@@ -5,11 +5,14 @@ from ADSScanExplorerPipeline.models import JournalVolume, VolumeStatus
 from ADSScanExplorerPipeline.ingestor import parse_top_file, parse_dat_file, parse_image_files, identify_journals, upload_image_files, check_all_image_files_exists, index_ocr_files, set_ingestion_error_status
 from kombu import Queue
 import ADSScanExplorerPipeline.app as app_module
-# import adsmsg
+from adsputils import load_config
+
+
 
 # ============================= INITIALIZATION ==================================== #
 
 proj_home = os.path.realpath(os.path.join(os.path.dirname(__file__), '../'))
+config = load_config(proj_home=proj_home)
 app = app_module.ADSScanExplorerPipeline('ads-scan-pipeline', proj_home=proj_home, local_config=globals().get('local_config', {}))
 logger = app.logger
 
@@ -41,9 +44,9 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
 
         try:
             top_filename = vol.journal + vol.volume + ".top"
-            top_file_path = os.path.join(base_path, "lists", vol.type, vol.journal, top_filename)
+            top_file_path = os.path.join(base_path, config.get('TOP_SUB_DIR', ''), vol.type, vol.journal, top_filename)
             dat_file_path = top_file_path.replace(".top", ".dat")
-            image_path = os.path.join(base_path, "bitmaps", vol.type, vol.journal, vol.volume, "600")
+            image_path = os.path.join(base_path, config.get('BITMAP_SUB_DIR', ''), vol.type, vol.journal, vol.volume, "600")
 
             for page in parse_top_file(top_file_path, vol, session):
                 session.add(page)
@@ -80,7 +83,7 @@ def task_upload_image_files_for_volume(base_path: str, journal_volume_id: str):
         vol = None
         try:
             vol = JournalVolume.get_from_id_or_name(journal_volume_id, session)
-            image_path = os.path.join(base_path, "bitmaps", vol.type, vol.journal, vol.volume, "600")
+            image_path = os.path.join(base_path, config.get('BITMAP_SUB_DIR', ''), vol.type, vol.journal, vol.volume, "600")
             check_all_image_files_exists(image_path, vol, session)
             upload_image_files(image_path, vol, session)
             vol.status = VolumeStatus.Bucket_done
@@ -103,7 +106,7 @@ def task_index_ocr_files_for_volume(base_path: str, journal_volume_id: str):
         vol = None
         try:
             vol = JournalVolume.get_from_id_or_name(journal_volume_id, session)
-            ocr_path = os.path.join(base_path, "ocr", vol.type, vol.journal, vol.volume)
+            ocr_path = os.path.join(base_path, config.get('OCR_SUB_DIR', ''), vol.type, vol.journal, vol.volume)
             index_ocr_files(ocr_path, vol, session)
             vol.status = VolumeStatus.Done
             vol.status_message = None

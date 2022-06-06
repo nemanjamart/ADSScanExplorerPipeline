@@ -22,3 +22,9 @@ TESTING_MODE = True
 # and it allows debuggers to run if needed:
 CELERY_ALWAYS_EAGER = True
 CELERY_EAGER_PROPAGATES_EXCEPTIONS = True
+
+# Sub-directories of the input folder pointing to the
+# publication type directory containing book, seri, conf etc
+TOP_SUB_DIR = 'lists'
+BITMAP_SUB_DIR='bitmaps'
+OCR_SUB_DIR='ocr/full'

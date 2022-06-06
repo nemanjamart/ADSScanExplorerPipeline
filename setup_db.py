@@ -4,7 +4,6 @@ import ADSScanExplorerPipeline.models
 import argparse
 import os
 from adsputils import setup_logging, load_config
-from distutils.util import strtobool
 
 # ============================= INITIALIZATION ==================================== #
 
@@ -21,9 +20,9 @@ if __name__ == '__main__':
 
     parser.add_argument("--re-create",
                     dest="delete",
+                    action='store_true',
                     required=False,
-                    default="False",
-                    type=str,
+                    default=False,
                     help="Deletes all existing ads_scan_explorer tables in the DB before creating fresh tables")
     args = parser.parse_args()
     engine = create_engine(config.get("SQLALCHEMY_URL", ""), echo=False)
@@ -31,7 +30,7 @@ if __name__ == '__main__':
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
 
-    if bool(strtobool(args.delete)):
+    if args.delete:
         ADSScanExplorerPipeline.models.Base.metadata.drop_all(engine)
     ADSScanExplorerPipeline.models.Base.metadata.create_all(engine)
     session.commit()

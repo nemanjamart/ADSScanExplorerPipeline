@@ -2,7 +2,6 @@ from opensearchpy import OpenSearch
 import json
 import argparse
 from adsputils import setup_logging, load_config
-from distutils.util import strtobool
 import os
 
 # ============================= INITIALIZATION ==================================== #
@@ -19,15 +18,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--re-create",
                     dest="delete",
+                    action='store_true',
                     required=False,
-                    default="False",
-                    type=str,
+                    default=False,
                     help="Deletes existing ads_scan_explorer index before creating a new fresh instance")
     args = parser.parse_args()
 
 
 opensearch = OpenSearch(config.get("OPEN_SEARCH_URL", ""))
-if bool(strtobool(args.delete)):
+if args.delete:
     opensearch.indices.delete(index = config.get("OPEN_SEARCH_INDEX", ""))
 
 os_mapping_file = "./docker/os/mappings.json"

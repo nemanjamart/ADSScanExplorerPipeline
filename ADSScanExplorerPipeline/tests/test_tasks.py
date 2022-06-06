@@ -103,8 +103,8 @@ class TestModels(unittest.TestCase):
     @patch('ADSScanExplorerPipeline.app.ADSScanExplorerPipeline.session_scope')
     @patch('ADSScanExplorerPipeline.models.JournalVolume.get_from_id_or_name')
     @patch('ADSScanExplorerPipeline.models.Page.get_all_from_volume')
-    @patch('openearch.Opensearch')
-    def test_task_index_ocr_files_for_volume(self, Opensearch, get_all_from_volume, get_from_id_or_name, session_scope):
+    @patch('opensearchpy.OpenSearch')
+    def test_task_index_ocr_files_for_volume(self, OpenSearch, get_all_from_volume, get_from_id_or_name, session_scope):
         vol = JournalVolume("seri", "test.", "0001")
         vol.id = '60181735-6f0c-47a6-bf9d-47a1f1fc4fc4'
         get_from_id_or_name.return_value = vol
@@ -120,6 +120,6 @@ class TestModels(unittest.TestCase):
         for vol in used_session.query(JournalVolume).filter(JournalVolume.journal == "").all():
             self.assertEqual(vol.status, VolumeStatus.Done)
         
-        Opensearch.assert_called()
-        Opensearch.return_value.delete_by_query.assert_called()
-        self.assertEqual("{'page_id': '7385f212-d403-46bd-b235-96d6da01ce0c', 'volume_id': '60181735-6f0c-47a6-bf9d-47a1f1fc4fc4', 'text': 'test ocr text', 'articles': []}" , str(Opensearch.return_value.index.call_args_list[0][1]['document']))
+        OpenSearch.assert_called()
+        OpenSearch.return_value.delete_by_query.assert_called()
+        self.assertEqual("{'page_id': '7385f212-d403-46bd-b235-96d6da01ce0c', 'volume_id': '60181735-6f0c-47a6-bf9d-47a1f1fc4fc4', 'text': 'test ocr text', 'articles': []}" , str(OpenSearch.return_value.index.call_args_list[0][1]['document']))

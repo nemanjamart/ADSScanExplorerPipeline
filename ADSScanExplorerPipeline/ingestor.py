@@ -177,7 +177,7 @@ def identify_journals(input_folder_path : str) -> Iterable[JournalVolume]:
     """
     Loops through the base folder to identify all journal volumnes that exists
     """
-    list_path = os.path.join(input_folder_path, "lists")
+    list_path = os.path.join(input_folder_path, config.get('TOP_SUB_DIR', ''))
     for type in os.listdir(list_path):
         type_path = os.path.join(list_path, type)
         if not os.path.isdir(type_path):
@@ -207,19 +207,19 @@ def hash_volume(base_path: str, vol: JournalVolume) -> str:
     Calculates a md5 hash from the change dates of all the associated images and files to the volume  
     """
     vol_hash = ""
-    list_path = os.path.join(base_path, "lists" ,vol.type, vol.journal)
+    list_path = os.path.join(base_path, config.get('TOP_SUB_DIR', '') ,vol.type, vol.journal)
     for file in os.listdir(list_path):
         file_path = os.path.join(list_path, file)
         modified_time = os.path.getmtime(file_path)
         vol_hash = md5((vol_hash + str(modified_time)).encode("utf-8")).hexdigest()
     
-    image_path = os.path.join(base_path, "bitmaps" ,vol.type, vol.journal, vol.volume, "600")
+    image_path = os.path.join(base_path, config.get('BITMAP_SUB_DIR', '') ,vol.type, vol.journal, vol.volume, "600")
     for file in os.listdir(image_path):
         file_path = os.path.join(image_path, file)
         modified_time = os.path.getmtime(file_path)
         vol_hash = md5((vol_hash + str(modified_time)).encode("utf-8")).hexdigest()
 
-    ocr_path = os.path.join(base_path, "ocr" ,vol.type, vol.journal, vol.volume)
+    ocr_path = os.path.join(base_path, config.get('OCR_SUB_DIR', '') ,vol.type, vol.journal, vol.volume)
     for file in os.listdir(ocr_path):
         file_path = os.path.join(ocr_path, file)
         modified_time = os.path.getmtime(file_path)
