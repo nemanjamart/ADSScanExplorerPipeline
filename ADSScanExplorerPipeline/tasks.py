@@ -113,7 +113,7 @@ def task_index_ocr_files_for_volume(base_path: str, journal_volume_id: str):
             session.add(vol)
         except Exception as e:
             session.rollback()
-            logger.error("Failed to index ocr files from journal_volume_id: %s due to: %s", str(journal_volume_id), e)
+            logger.warn("Failed to index ocr files from journal_volume_id: %s due to: %s", str(journal_volume_id), e)
             error_msg = str(e)
     if error_msg != "":
         set_ingestion_error_status(session, journal_volume_id, error_msg)
