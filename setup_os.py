@@ -29,9 +29,9 @@ opensearch = OpenSearch(config.get("OPEN_SEARCH_URL", ""))
 if args.delete:
     opensearch.indices.delete(index = config.get("OPEN_SEARCH_INDEX", ""))
 
-os_mapping_file = "./docker/os/mappings.json"
+os_config_file = "./docker/os/config.json"
 
-with open(os_mapping_file, 'r') as f:
+with open(os_config_file, 'r') as f:
     index_dict = json.load(f)
     opensearch.indices.create(index = config.get("OPEN_SEARCH_INDEX", ""), body = index_dict)
 opensearch.transport.close()

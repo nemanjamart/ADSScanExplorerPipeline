@@ -11,7 +11,7 @@ services:
         soft: 65536 # maximum number of open files for the OpenSearch user, set to at least 65536 on modern systems
         hard: 65536
     volumes:
-      - opensearch-data1:/usr/share/opensearch/data
+      - ./data:/usr/share/opensearch/config/data
     ports:
       - 9200:9200
       - 9600:9600 # required for Performance Analyzer
@@ -26,9 +26,6 @@ services:
       - "5601"
     networks:
       - ads_scan_explorer_network
-
-volumes:
-  opensearch-data1:
 
 networks:
   ads_scan_explorer_network:

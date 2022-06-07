@@ -1,0 +1,45 @@
+{
+  "settings": {
+    "index": {
+      "analysis": {
+        "analyzer": {
+          "text_analyzer": {
+            "type": "custom",
+            "tokenizer": "standard",
+            "filter": ["syn_filter", "stop_filter"]
+          }
+        },
+        "filter": {
+          "syn_filter": {
+            "type": "synonym",
+            "synonyms_path": "/usr/share/opensearch/config/data/ads_text.syn",
+            "updateable": true
+          },
+          "stop_filter": {
+            "type": "stop",
+            "stopwords_path": "/usr/share/opensearch/config/data/ads_text.stop",
+            "ignore_case": true
+          }
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "text": {
+        "type": "text",
+        "search_analyzer": "text_analyzer"
+      },
+      "page_id": {
+        "type": "keyword"
+      },
+      "volume_id": {
+        "type": "keyword"
+      },
+      "article_ids": {
+        "type": "keyword"
+      }
+    },
+    "dynamic": false
+  }  
+}
