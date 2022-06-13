@@ -32,7 +32,7 @@ docker compose -f docker/os/docker-compose.yaml -f docker/os/{environment}.yaml 
 Setup the index by running through the pipeline container:
 
 ```
-docker exec -it ads_scan_explorer_pipeline python setup_os.py [--re-create]
+docker exec -it ads_scan_explorer_pipeline python setup_os.py [--re-create] [--update-settings]
 ```
 
 ### Database
