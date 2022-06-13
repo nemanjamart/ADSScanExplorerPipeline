@@ -4,14 +4,12 @@ import os
 from ADSScanExplorerPipeline.models import JournalVolume, Page, Article, PageColor
 from ADSScanExplorerPipeline.exceptions import MissingImageFileException
 from ADSScanExplorerPipeline.ingestor import hash_volume, identify_journals, parse_volume_from_top_file, parse_top_file, parse_dat_file, parse_image_files, check_all_image_files_exists, upload_image_files
-from adsputils import load_config
 from moto import mock_s3
 import boto3
 
 class TestIngestor(unittest.TestCase):
 
     test_home = os.path.realpath(os.path.join(os.path.dirname(__file__), '../'))
-    config = load_config(proj_home=test_home)
     data_folder = os.path.join(test_home, "tests/data/")
 
     def test_vol_hash(self):
@@ -40,7 +38,7 @@ class TestIngestor(unittest.TestCase):
         expected_page =  Page("0000255,001", vol.id)
         expected_page.label =  "255-01"
         top_filename = vol.journal + vol.volume + ".top"
-        top_file_path = os.path.join(self.data_folder, self.config.get('TOP_SUB_DIR',''), vol.type, vol.journal, top_filename)
+        top_file_path = os.path.join(self.data_folder, "lists", vol.type, vol.journal, top_filename)
         n = 0
         for page in parse_top_file(top_file_path, vol, session):
             n += 1
@@ -59,7 +57,7 @@ class TestIngestor(unittest.TestCase):
         expected_article =  Article("test......001..test", vol.id)
         get_from_name_and_journal.return_value = page
         dat_filename = vol.journal + vol.volume + ".dat"
-        dat_file_path = os.path.join(self.data_folder, self.config.get('TOP_SUB_DIR',''), vol.type, vol.journal, dat_filename)
+        dat_file_path = os.path.join(self.data_folder, "lists", vol.type, vol.journal, dat_filename)
         n = 0
         for article in parse_dat_file(dat_file_path, vol, session):
             n += 1
@@ -72,7 +70,7 @@ class TestIngestor(unittest.TestCase):
         vol = JournalVolume("seri", "test.", "0001")
         expected_page =  Page("0000255,001", vol.id)
         get_from_name_and_journal.return_value = expected_page
-        image_folder_path = os.path.join(self.data_folder,  self.config.get('BITMAP_SUB_DIR',''), vol.type, vol.journal, vol.volume, "600")
+        image_folder_path = os.path.join(self.data_folder,  "bitmaps", vol.type, vol.journal, vol.volume, "600")
         n = 0
         for page in parse_image_files(image_folder_path, vol, None):
             n += 1
@@ -86,7 +84,7 @@ class TestIngestor(unittest.TestCase):
     def test_parse_image_files_wrong_page(self, get_from_name_and_journal):
         vol = JournalVolume("seri", "test.", "0001")
         get_from_name_and_journal.return_value = None
-        image_folder_path = os.path.join(self.data_folder,  self.config.get('BITMAP_SUB_DIR',''), vol.type, vol.journal, vol.volume, "600")
+        image_folder_path = os.path.join(self.data_folder,  "bitmaps", vol.type, vol.journal, vol.volume, "600")
         for page in parse_image_files(image_folder_path, vol, None):
             raise ValueError("Should not be here")
 
@@ -95,7 +93,7 @@ class TestIngestor(unittest.TestCase):
         vol = JournalVolume("seri", "test.", "0001")
         expected_page =  Page("0000255,001", vol.id)
         get_all_from_volume.return_value = [expected_page]
-        image_folder_path = os.path.join(self.data_folder,  self.config.get('BITMAP_SUB_DIR',''), vol.type, vol.journal, vol.volume, "600")
+        image_folder_path = os.path.join(self.data_folder,  "bitmaps", vol.type, vol.journal, vol.volume, "600")
         check_all_image_files_exists(image_folder_path, vol, None)
 
     @patch('ADSScanExplorerPipeline.models.Page.get_all_from_volume')
@@ -103,7 +101,7 @@ class TestIngestor(unittest.TestCase):
         vol = JournalVolume("seri", "test.", "0001")
         expected_page =  Page("0000256,001", vol.id)
         get_all_from_volume.return_value = [expected_page]
-        image_folder_path = os.path.join(self.data_folder,  self.config.get('BITMAP_SUB_DIR',''), vol.type, vol.journal, vol.volume, "600")
+        image_folder_path = os.path.join(self.data_folder,  "bitmaps", vol.type, vol.journal, vol.volume, "600")
         self.assertRaises(MissingImageFileException, check_all_image_files_exists, image_folder_path, vol, None)
 
     @mock_s3
@@ -111,7 +109,7 @@ class TestIngestor(unittest.TestCase):
     def test_upload_images(self, get_from_name_and_journal):
         """ Makes sure the files are uploaded to a mock s3 bucket"""
         vol = JournalVolume("seri", "test.", "0001")
-        image_folder_path = os.path.join(self.data_folder, self.config.get('BITMAP_SUB_DIR',''), vol.type, vol.journal, vol.volume, "600")
+        image_folder_path = os.path.join(self.data_folder,  "bitmaps", vol.type, vol.journal, vol.volume, "600")
         expected_page =  Page("0000255,001", vol.id)
         get_from_name_and_journal.return_value = expected_page
         conn = boto3.resource('s3')
