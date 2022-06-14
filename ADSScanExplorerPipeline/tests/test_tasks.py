@@ -1,7 +1,7 @@
 from concurrent.futures import process
 import os
 import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import patch, MagicMock
 from alchemy_mock.mocking import UnifiedAlchemyMagicMock
 from ADSScanExplorerPipeline.tasks import task_process_new_volumes, task_process_volume, task_upload_image_files_for_volume, task_index_ocr_files_for_volume
 from ADSScanExplorerPipeline.models import JournalVolume, VolumeStatus, Page, PageColor, PageType, Article
@@ -122,4 +122,4 @@ class TestModels(unittest.TestCase):
         
         OpenSearch.assert_called()
         OpenSearch.return_value.delete_by_query.assert_called()
-        self.assertEqual("{'page_id': '7385f212-d403-46bd-b235-96d6da01ce0c', 'volume_id': '60181735-6f0c-47a6-bf9d-47a1f1fc4fc4', 'text': 'test ocr text', 'articles': []}" , str(OpenSearch.return_value.index.call_args_list[0][1]['document']))
+        self.assertEqual("{'page_id': '7385f212-d403-46bd-b235-96d6da01ce0c', 'volume_id': '60181735-6f0c-47a6-bf9d-47a1f1fc4fc4', 'text': 'test ocr text', 'article_ids': []}" , str(OpenSearch.return_value.index.call_args_list[0][1]['body']))

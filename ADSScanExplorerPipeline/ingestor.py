@@ -5,7 +5,7 @@ from hashlib import md5
 from typing import Iterable
 from ADSScanExplorerPipeline.models import JournalVolume, Page, Article, PageColor, VolumeStatus
 from ADSScanExplorerPipeline.exceptions import MissingImageFileException
-from opensearchpy import OpenSearch
+import opensearchpy
 from sqlalchemy.orm import Session
 from PIL import Image
 from PIL.TiffTags import TAGS
@@ -144,7 +144,7 @@ def index_ocr_files(ocr_path: str, vol: JournalVolume, session: Session):
     Loops through all ocr files to the volume and adds them to an Open Search index.
     """
 
-    opensearch = OpenSearch(config.get("OPEN_SEARCH_URL", ""))
+    opensearch = opensearchpy.OpenSearch(config.get("OPEN_SEARCH_URL", ""))
     query ={
         "query":{
             "term": {
