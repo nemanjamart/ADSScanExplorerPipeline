@@ -60,6 +60,7 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
                 session.add(page)
 
             vol.status = VolumeStatus.Db_done
+            vol.status_message = None
             session.add(vol)
             
         except Exception as e:
