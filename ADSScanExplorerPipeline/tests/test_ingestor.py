@@ -3,7 +3,7 @@ from unittest.mock import patch
 import os
 from ADSScanExplorerPipeline.models import JournalVolume, Page, Article, PageColor
 from ADSScanExplorerPipeline.exceptions import MissingImageFileException
-from ADSScanExplorerPipeline.ingestor import hash_volume, identify_journals, parse_volume_from_top_file, parse_top_file, parse_dat_file, parse_image_files, check_all_image_files_exists, upload_image_files
+from ADSScanExplorerPipeline.ingestor import hash_volume, identify_journals, parse_volume_from_top_file, parse_top_file, parse_dat_file, parse_image_files, check_all_image_files_exists, upload_image_files, split_top_row, split_top_map_row
 from moto import mock_s3
 import boto3
 
@@ -28,6 +28,44 @@ class TestIngestor(unittest.TestCase):
             self.assertEqual(vol.type, expected_vol.type)
             self.assertEqual(vol.journal, expected_vol.journal)
             self.assertEqual(vol.volume, expected_vol.volume)
+    
+    def test_parse_top_row(self):
+        name, label = split_top_row("A000136.000")
+        self.assertEqual(name, "A000136.000")
+        self.assertEqual(label, None)
+        
+        name, label = split_top_row("A000136.000       A")
+        self.assertEqual(name, "A000136.000")
+        self.assertEqual(label, "A")
+        
+        name, label = split_top_row("A000136.000A261/A262")
+        self.assertEqual(name, "A000136.000")
+        self.assertEqual(label, "A261/A262")
+        
+        name, label = split_top_row("A000136.000261/262")
+        self.assertEqual(name, "A000136.000")
+        self.assertEqual(label, "261/262")
+
+    def test_parse_top_map_row(self):
+        name, label = split_top_map_row("A000136.000 ii 1")
+        self.assertEqual(name, "A000136.000")
+        self.assertEqual(label, "ii")
+        
+        name, label = split_top_map_row("A000136.000 A261/A262 I")
+        self.assertEqual(name, "A000136I000")
+        self.assertEqual(label, "A261/A262")
+
+        name, label = split_top_map_row("A000136.000 A261/A262 B")
+        self.assertEqual(name, "A000136:000")
+        self.assertEqual(label, "A261/A262")
+        
+        name, label = split_top_map_row("A000136.000 A261/A262 C")
+        self.assertEqual(name, "A000136,000")
+        self.assertEqual(label, "A261/A262")
+
+        name, label = split_top_map_row("A000136.000 A261/A262 P")
+        self.assertEqual(name, "A000136P000")
+        self.assertEqual(label, "A261/A262")
 
     @patch('sqlalchemy.orm.Session')
     def test_parse_top_file(self, Session):
@@ -109,7 +147,7 @@ class TestIngestor(unittest.TestCase):
     def test_upload_images(self, get_from_name_and_journal):
         """ Makes sure the files are uploaded to a mock s3 bucket"""
         vol = JournalVolume("seri", "test.", "0001")
-        image_folder_path = os.path.join(self.data_folder,  "bitmaps", vol.type, vol.journal, vol.volume, "600")
+        image_folder_path = os.path.join(self.data_folder, "bitmaps", vol.type, vol.journal, vol.volume, "600")
         expected_page =  Page("0000255,001", vol.id)
         get_from_name_and_journal.return_value = expected_page
         conn = boto3.resource('s3')

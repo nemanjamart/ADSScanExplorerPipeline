@@ -29,6 +29,11 @@ def parse_top_file(file_path: str, journal_volume: JournalVolume, session: Sessi
     """
     Loops through the volumes .top file and yields a Page object for each row
     """
+    topmap_filepath = file_path + ".map"
+    is_map_file = False
+    if os.path.exists(topmap_filepath):
+        file_path = topmap_filepath
+        is_map_file = True
     with open(file_path) as file:
         line_num = 0
         for line in file:
@@ -36,16 +41,49 @@ def parse_top_file(file_path: str, journal_volume: JournalVolume, session: Sessi
             if line_num < 5: #Top file contains 4 header lines
                 continue
             running_page_num = line_num - 4
-            line_split = re.split(r"\s+", line)
-            #First is page name, second possibly page number if exists
-            name = line_split[0]
-            page = Page.get_or_create(name, journal_volume.id, session)
+
+            if is_map_file:
+                page_name, label = split_top_map_row(line)
+            else:
+                page_name, label = split_top_row(line)
+
+            page = Page.get_or_create(page_name, journal_volume.id, session)
             page.volume_running_page_num = running_page_num
-            if len(line_split) > 1:
-                page_label = line_split[1]
-                if not page_label.isspace() and len(page_label) > 0:
-                    page.label = page_label
+            if label:
+                page.label = label
             yield page
+
+def split_top_map_row(line: str):
+    """ Function to solit the lines in a.top.map file.
+        These are tab separated and have the page type indication on the 3rd column instead of in the image name. 
+        The image name is therefore adjusted to kepp in sync with the rest of the code
+    """
+    line_split = re.split(r"\s+", line)
+    name = line_split[0]
+    label = None
+    if len(line_split) > 1:
+        if not line_split[1].isspace() and len(line_split[1]) > 0:
+            label = line_split[1]
+    if len(line_split) > 2:
+        type = line_split[2]
+        if type == "C":
+            name = name.replace(".", ",")
+        elif type == "B":
+            name = name.replace(".", ":")
+        elif type == "I":
+            name = name.replace(".", "I")
+        elif type == "P":
+            name = name.replace(".", "P")
+    return name, label
+
+def split_top_row(line: str):
+    name = line[0:11]
+    label = None
+    page_label = line[11:].strip()
+    if not page_label.isspace() and len(page_label) > 0:
+        label = page_label
+    return name, label
+
 
 def parse_dat_file(file_path: str, journal_volume: JournalVolume, session: Session):
     """
@@ -187,7 +225,7 @@ def identify_journals(input_folder_path : str) -> Iterable[JournalVolume]:
             if not os.path.isdir(journal_path):
                 continue
             for file in os.listdir(journal_path):
-                if ".top" in file:
+                if file.endswith(".top"):
                     volume = parse_volume_from_top_file(file, journal)
                     vol = JournalVolume(type, journal, volume)
                     try:
