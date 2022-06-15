@@ -2,7 +2,7 @@ from __future__ import annotations
 import uuid 
 from typing import List
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, ForeignKey, Integer, String, Table, UniqueConstraint, Enum, Index
+from sqlalchemy import Column, ForeignKey, Integer, String, Boolean, Table, UniqueConstraint, Enum, Index
 from sqlalchemy.orm import relationship, Session
 from sqlalchemy_utils.types import UUIDType
 from sqlalchemy_utils.models import Timestamp
@@ -18,10 +18,8 @@ class VolumeStatus(enum.Enum):
     New = 1
     Processing = 2
     Update = 3
-    Db_done = 4
-    Bucket_done = 5
-    Done = 6
-    Error = 7
+    Done = 4
+    Error = 5
 
 class PageColor(enum.Enum):
     """Page Color Type"""
@@ -63,6 +61,10 @@ class JournalVolume(Base, Timestamp):
     type = Column(String)
     status = Column(Enum(VolumeStatus))
     status_message = Column(String)
+    db_done = Column(Boolean, default=False)
+    db_uploaded = Column(Boolean, default=False)
+    bucket_uploaded = Column(Boolean, default=False)
+    ocr_uploaded = Column(Boolean, default=False)
     file_hash = Column(String)
 
     UniqueConstraint(journal, volume)

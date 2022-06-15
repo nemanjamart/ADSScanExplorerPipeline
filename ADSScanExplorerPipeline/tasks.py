@@ -59,7 +59,7 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
             for page in parse_image_files(image_path, vol, session):
                 session.add(page)
 
-            vol.status = VolumeStatus.Db_done
+            vol.db_done = True
             vol.status_message = None
             session.add(vol)
             
@@ -74,6 +74,9 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
         task_upload_image_files_for_volume.delay(base_path, journal_volume_id)
     if index_ocr:
         task_index_ocr_files_for_volume.delay(base_path, journal_volume_id)
+    vol.status = VolumeStatus.Done
+    session.add(vol)
+    session.commit()
     return session
 
 @app.task(queue='process-volume')
@@ -87,7 +90,7 @@ def task_upload_image_files_for_volume(base_path: str, journal_volume_id: str):
             image_path = os.path.join(base_path, config.get('BITMAP_SUB_DIR', ''), vol.type, vol.journal, vol.volume, "600")
             check_all_image_files_exists(image_path, vol, session)
             upload_image_files(image_path, vol, session)
-            vol.status = VolumeStatus.Bucket_done
+            vol.bucket_uploaded = True
             vol.status_message = None
             session.add(vol)
         except Exception as e:
@@ -109,7 +112,7 @@ def task_index_ocr_files_for_volume(base_path: str, journal_volume_id: str):
             vol = JournalVolume.get_from_id_or_name(journal_volume_id, session)
             ocr_path = os.path.join(base_path, config.get('OCR_SUB_DIR', ''), vol.type, vol.journal, vol.volume)
             index_ocr_files(ocr_path, vol, session)
-            vol.status = VolumeStatus.Done
+            vol.ocr_uploaded = True
             vol.status_message = None
             session.add(vol)
         except Exception as e:
