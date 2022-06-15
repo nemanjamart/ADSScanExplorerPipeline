@@ -104,10 +104,9 @@ def parse_dat_file(file_path: str, journal_volume: JournalVolume, session: Sessi
                     continue
                 page = Page.get_from_name_and_journal(page_name, journal_volume.id, session)
                 if first:
-                    article.page_start = page.volume_running_page_num
+                    article.start_page_number = page.volume_running_page_num
                     first = False
                 article.pages.append(page)
-            article.page_end = page.volume_running_page_num
             yield article
 
 def check_all_image_files_exists(image_path: str, journal_volume: JournalVolume, session: Session):
