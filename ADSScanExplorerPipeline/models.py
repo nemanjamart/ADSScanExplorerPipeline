@@ -113,6 +113,7 @@ class Article(Base, Timestamp):
     id = Column(UUIDType, default=uuid.uuid4, primary_key=True)
     bibcode = Column(String, unique=True)
     journal_volume_id = Column(UUIDType, ForeignKey(JournalVolume.id))
+    start_page_number = Column(Integer)
     pages = relationship('Page', secondary=page_article_association_table, back_populates='articles', lazy='dynamic')
 
     @classmethod
