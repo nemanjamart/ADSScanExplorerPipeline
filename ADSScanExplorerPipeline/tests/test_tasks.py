@@ -48,7 +48,8 @@ class TestModels(unittest.TestCase):
             self.assertEqual(vol.type, "seri")
             self.assertEqual(vol.journal, "test.")
             self.assertEqual(vol.volume, "0001")
-            self.assertEqual(vol.status, VolumeStatus.Db_done)
+            self.assertTrue(vol.db_done)
+            self.assertEqual(vol.status, VolumeStatus.Done)
 
         #Mocked session doesn't update the row but adds a new row when adding to the db therefore we get 3 identical rows
         self.assertEqual(len(used_session.query(Page).filter().all()), 3)
@@ -91,7 +92,7 @@ class TestModels(unittest.TestCase):
         used_session = task_upload_image_files_for_volume(self.data_folder, vol.id)
 
         for vol in used_session.query(JournalVolume).filter(JournalVolume.journal == "").all():
-            self.assertEqual(vol.status, VolumeStatus.Bucket_done)
+            self.assertTrue(vol.bucket_uploaded)
 
         keys = []
         for obj in bucket.objects.all():
@@ -118,7 +119,7 @@ class TestModels(unittest.TestCase):
 
         used_session = task_index_ocr_files_for_volume(self.data_folder, vol.id)
         for vol in used_session.query(JournalVolume).filter(JournalVolume.journal == "").all():
-            self.assertEqual(vol.status, VolumeStatus.Done)
+            self.assertTrue(vol.ocr_uploaded)
         
         OpenSearch.assert_called()
         OpenSearch.return_value.delete_by_query.assert_called()
