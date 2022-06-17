@@ -4,7 +4,6 @@ from typing import List
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, ForeignKey, Integer, String, Boolean, Table, UniqueConstraint, Enum, Index
 from sqlalchemy.orm import relationship, Session
-from sqlalchemy_utils.types import UUIDType
 from sqlalchemy_utils.models import Timestamp
 
 from ADSScanExplorerPipeline.exceptions import PageNameException
@@ -51,11 +50,12 @@ class JournalVolume(Base, Timestamp):
         self.type = type
         self.journal = journal
         self.volume = volume
+        self.id = self.journal +  self.volume
 
     __tablename__ = 'journal_volume'
     __table_args__ = (Index('volume_index', "journal", "volume"), )
 
-    id = Column(UUIDType, default=uuid.uuid4, primary_key=True)
+    id = Column(String, primary_key=True)
     journal = Column(String)
     volume = Column(String)
     type = Column(String)
@@ -83,9 +83,7 @@ class JournalVolume(Base, Timestamp):
 
     @classmethod
     def get_from_id_or_name(cls, id: str, session: Session) -> JournalVolume:
-        vol = None
-        if is_valid_uuid(id):
-            vol = session.query(cls).filter(cls.id == id).one()
+        vol = session.query(cls).filter(cls.id == id).one_or_none()
         if vol:
             return vol
         vol = session.query(cls).filter(cls.journal == id[0:5], cls.volume == id[5:9]).one()
@@ -101,7 +99,7 @@ class JournalVolume(Base, Timestamp):
 
 page_article_association_table = Table('page2article', Base.metadata,
     Column('page_id', ForeignKey('page.id'), primary_key=True),
-    Column('article_id', ForeignKey('article.id'), primary_key=True)
+    Column('article_id', ForeignKey('article.bibcode'), primary_key=True)
 )
 
 class Article(Base, Timestamp):
@@ -112,9 +110,8 @@ class Article(Base, Timestamp):
         self.bibcode = bibcode
         self.journal_volume_id = journal_volume_id
 
-    id = Column(UUIDType, default=uuid.uuid4, primary_key=True)
-    bibcode = Column(String, unique=True)
-    journal_volume_id = Column(UUIDType, ForeignKey(JournalVolume.id))
+    bibcode = Column(String, unique=True, primary_key=True)
+    journal_volume_id = Column(String, ForeignKey(JournalVolume.id))
     start_page_number = Column(Integer)
     pages = relationship('Page', secondary=page_article_association_table, back_populates='articles', lazy='dynamic')
 
@@ -134,8 +131,10 @@ class Page(Base, Timestamp):
         self.journal_volume_id = journal_volume_id
         self.color_type = PageColor.BW
         self.parse_info_from_name(name)
+        self.format = 'image/tiff'
+        self.id = self.journal_volume_id + "_" + self.name
 
-    id = Column(UUIDType, default=uuid.uuid4,  primary_key=True)
+    id = Column(String,  primary_key=True)
     name = Column(String)
     label = Column(String)
     format = Column(String, default='image/tiff')
@@ -143,7 +142,7 @@ class Page(Base, Timestamp):
     page_type = Column(Enum(PageType))
     width = Column(Integer)
     height = Column(Integer)
-    journal_volume_id = Column(UUIDType, ForeignKey(JournalVolume.id))
+    journal_volume_id = Column(String, ForeignKey(JournalVolume.id))
     volume_running_page_num = Column(Integer)
     articles = relationship('Article', secondary=page_article_association_table, back_populates='pages')
 
