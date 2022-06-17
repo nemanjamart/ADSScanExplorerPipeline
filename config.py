@@ -23,6 +23,8 @@ TESTING_MODE = True
 CELERY_ALWAYS_EAGER = True
 CELERY_EAGER_PROPAGATES_EXCEPTIONS = True
 
+
+SERVICE_DB_PUSH_URL = 'http://localhost:8181/metadata/collection'
 # Sub-directories of the input folder pointing to the
 # publication type directory containing book, seri, conf etc
 TOP_SUB_DIR = 'lists'
