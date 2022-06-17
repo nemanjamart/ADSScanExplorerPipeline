@@ -50,6 +50,24 @@ class TestModels(unittest.TestCase):
             self.assertEqual(vol.volume, "0001")
             self.assertTrue(vol.db_done)
             self.assertEqual(vol.status, VolumeStatus.Done)
+            expected_dict = {
+                'type': 'seri',
+                'journal': 'test.',
+                'volume': '0001',
+                'pages':[{
+                    'name': '0000255,001',
+                    'label': '255-01',
+                    'format': 'image/tiff',
+                    'color_type': 'Greyscale',
+                    'page_type': 'FrontMatter',
+                    'width': 3904,
+                    'height': 5312,
+                    'volume_running_page_num': 1,
+                    'articles': [{'bibcode':'test......001..test'}] 
+                    }]
+            }
+            self.assertEqual(vol.to_dict(), expected_dict)
+
 
         #Mocked session doesn't update the row but adds a new row when adding to the db therefore we get 3 identical rows
         self.assertEqual(len(used_session.query(Page).filter().all()), 3)

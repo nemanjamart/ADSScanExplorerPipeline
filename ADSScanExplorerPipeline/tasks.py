@@ -1,4 +1,5 @@
-
+from concurrent.futures import process
+import requests
 import os
 import uuid
 from ADSScanExplorerPipeline.models import JournalVolume, VolumeStatus
@@ -24,7 +25,7 @@ app.conf.CELERY_QUEUES = (
 # ============================= TASKS ============================================= #
 
 @app.task(queue='process-volume')
-def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bool = False, index_ocr: bool = False):
+def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bool = False, index_ocr: bool = False, upload_db: bool = True):
     """
     Processes a journal volume
     """
@@ -41,7 +42,6 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
             session.rollback()
             logger.error("Failed to get journal_volume: %s from db: %s", journal_volume_id, e)
             return
-
         try:
             top_filename = vol.journal + vol.volume + ".top"
             top_file_path = os.path.join(base_path, config.get('TOP_SUB_DIR', ''), vol.type, vol.journal, top_filename)
@@ -50,9 +50,11 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
 
             for page in parse_top_file(top_file_path, vol, session):
                 session.add(page)
+                vol.pages.append(page)
 
             for article in parse_dat_file(dat_file_path, vol, session):
                 session.add(article)
+                vol.articles.append(article)
 
             check_all_image_files_exists(image_path, vol, session)
 
@@ -70,13 +72,45 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
     if error_msg != "":
         set_ingestion_error_status(session, journal_volume_id, error_msg)
         return
+    
     if upload_files:
         task_upload_image_files_for_volume.delay(base_path, journal_volume_id)
     if index_ocr:
         task_index_ocr_files_for_volume.delay(base_path, journal_volume_id)
+    if upload_db:
+        task_upload_db_for_volume.delay(journal_volume_id)
+
+
     vol.status = VolumeStatus.Done
     session.add(vol)
-    session.commit()
+    session.commit()    
+    return session
+
+@app.task(queue='process-volume')
+def task_upload_db_for_volume(journal_volume_id: str):
+    """
+    Processes a journal volume
+    """
+    logger.info("Uploading db for journal_volume id: %s", journal_volume_id)
+    error_msg = ""  
+    with app.session_scope() as session:
+        vol = None
+        try:
+            vol = JournalVolume.get_from_id_or_name(journal_volume_id, session)
+            url = config.get('SERVICE_DB_PUSH_URL' ,'')
+            x = requests.put(url, json = vol.to_dict())
+            if x.status_code == 200:
+                vol.db_uploaded = True
+                vol.status_message = None
+                session.add(vol)
+            else:
+                raise Exception(x.content)
+        except Exception as e:
+            session.rollback()
+            logger.error("Failed to upload db from journal_volume_id: %s due to: %s", str(journal_volume_id), e)
+            error_msg = str(e)
+    if error_msg != "":
+        set_ingestion_error_status(session, journal_volume_id, error_msg)
     return session
 
 @app.task(queue='process-volume')
@@ -124,7 +158,7 @@ def task_index_ocr_files_for_volume(base_path: str, journal_volume_id: str):
     return session
 
 @app.task(queue='process-new-volumes')
-def task_process_new_volumes(base_path: str, upload_files: bool = False, index_ocr: bool = False, process: bool = True):
+def task_process_new_volumes(base_path: str, upload_files: bool = False, index_ocr: bool = False,  upload_db: bool = True, process: bool = True):
     """
     Investigate if any new or updated volumes exists and process them if process flag is set to True
     """
@@ -147,7 +181,7 @@ def task_process_new_volumes(base_path: str, upload_files: bool = False, index_o
             volumes_to_process.append(vol.id)
     if process:
         for vol_id in volumes_to_process:
-            task_process_volume.delay(base_path, vol_id, upload_files, index_ocr)
+            task_process_volume.delay(base_path, vol_id, upload_files, index_ocr, upload_db)
     return session
 
 if __name__ == '__main__':

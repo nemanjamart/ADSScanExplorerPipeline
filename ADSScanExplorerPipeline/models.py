@@ -69,6 +69,11 @@ class JournalVolume(Base, Timestamp):
 
     UniqueConstraint(journal, volume)
 
+    articles = relationship(
+        'Article', primaryjoin='JournalVolume.id==Article.journal_volume_id', back_populates='journal_volume')
+    pages = relationship(
+        'Page', primaryjoin='JournalVolume.id==Page.journal_volume_id', back_populates='journal_volume',  lazy='dynamic', order_by="Page.volume_running_page_num")
+
     @classmethod
     def get_from_obj(cls, vol: JournalVolume, session: Session) -> JournalVolume:
         return session.query(cls).filter(cls.type == vol.type, cls.journal == vol.journal, cls.volume == vol.volume).one_or_none()
@@ -95,7 +100,14 @@ class JournalVolume(Base, Timestamp):
     @classmethod
     def get_errors(cls, session: Session) -> JournalVolume:
         return session.query(cls).filter(cls.status == VolumeStatus.Error).all()
-
+    
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'journal': self.journal,
+            'volume': self.volume,
+            'pages': [page.to_dict() for page in self.pages]
+        }
 
 page_article_association_table = Table('page2article', Base.metadata,
     Column('page_id', ForeignKey('page.id'), primary_key=True),
@@ -113,6 +125,8 @@ class Article(Base, Timestamp):
     bibcode = Column(String, unique=True, primary_key=True)
     journal_volume_id = Column(String, ForeignKey(JournalVolume.id))
     start_page_number = Column(Integer)
+
+    journal_volume = relationship('JournalVolume', back_populates='articles')
     pages = relationship('Page', secondary=page_article_association_table, back_populates='articles', lazy='dynamic')
 
     @classmethod
@@ -144,7 +158,9 @@ class Page(Base, Timestamp):
     height = Column(Integer)
     journal_volume_id = Column(String, ForeignKey(JournalVolume.id))
     volume_running_page_num = Column(Integer)
+    
     articles = relationship('Article', secondary=page_article_association_table, back_populates='pages')
+    journal_volume = relationship('JournalVolume', back_populates='pages')
 
     UniqueConstraint(journal_volume_id, volume_running_page_num)
     UniqueConstraint(journal_volume_id, name)
@@ -188,3 +204,16 @@ class Page(Base, Timestamp):
                 self.label = str(first_num)
         if name[0] != "0":
                 self.label = name[0] + "-" + self.label
+
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'label': self.label,
+            'format': self.format,
+            'color_type': self.color_type.name,
+            'page_type': self.page_type.name,
+            'width': self.width,
+            'height': self.height,
+            'volume_running_page_num': self.volume_running_page_num,
+            'articles': [{'bibcode':article.bibcode} for article in self.articles],
+        }
