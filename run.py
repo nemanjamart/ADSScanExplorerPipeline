@@ -34,6 +34,12 @@ if __name__ == '__main__':
                     default="False",
                     type=str,
                     help="If ocr files should be index on opensearch")
+    parser.add_argument("--upload-db",
+                    dest="upload_db",
+                    required=False,
+                    default="True",
+                    type=str,
+                    help="If database should be uploaded to remote db")
 
     subparsers = parser.add_subparsers(help='commands', dest="action")
     new_parser = subparsers.add_parser('NEW', help='Loops through input folder and processes all new or updated volumes')
@@ -68,14 +74,17 @@ if __name__ == '__main__':
         ocr = False 
         if bool(strtobool(args.ocr)):
             ocr = True
+        upload_db = False 
+        if bool(strtobool(args.upload_db)):
+            upload_db = True
         
         if args.action == "NEW":
             process = False 
             if bool(strtobool(args.process)):
                 process = True
             logger.info("Process all new volumes in: %s", input_folder)
-            task_process_new_volumes.delay(input_folder, upload, ocr, process)
+            task_process_new_volumes.delay(input_folder, upload, ocr, process, upload_db)
         elif args.action == "SINGLE":
             for id in args.ids:
                 logger.info("Process volume: %s in: %s", id, input_folder)
-                task_process_volume.delay(input_folder, id, upload, ocr)
+                task_process_volume.delay(input_folder, id, upload, ocr, upload_db)
