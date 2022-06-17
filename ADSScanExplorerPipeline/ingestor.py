@@ -201,7 +201,7 @@ def index_ocr_files(ocr_path: str, vol: JournalVolume, session: Session):
         with open(os.path.join(ocr_path, ocr_filename)) as file:    
             articles = []
             for article in page.articles:
-                articles.append(article.id)
+                articles.append(article.bibcode)
             doc = {
                 'page_id': page.id,
                 'volume_id': vol.id,
