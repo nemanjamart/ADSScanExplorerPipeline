@@ -7,7 +7,6 @@ from sqlalchemy.orm import relationship, Session
 from sqlalchemy_utils.models import Timestamp
 
 from ADSScanExplorerPipeline.exceptions import PageNameException
-from ADSScanExplorerPipeline.utils import is_valid_uuid
 import enum
 
 Base = declarative_base()
