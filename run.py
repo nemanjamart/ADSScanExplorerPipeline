@@ -55,7 +55,7 @@ if __name__ == '__main__':
     new_parser.add_argument("--dry-run",
                 dest="dry_run",
                 required=False,
-                default="True",
+                default="False",
                 type=str,
                 help="If volume detection should just be dry_run")
 

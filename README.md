@@ -55,14 +55,21 @@ docker exec -it ads_scan_explorer_pipeline python setup_db.py [--re-create]
 ```
 
 ## Usage
-The pipeline can be run in a couple of different setups. Just dry run and check which volumes in the input folder that are new or have updated files. The volumes will be added to the db unde the table "journal_volume"
+The pipeline can be run in a couple of different setups.
+
+For a pure dry-run to see which volumes would be detected without writing anything to db run:
+```
+docker exec -it ads_scan_explorer_pipeline python run.py --input-folder=/opt/ADS_scans_sample/ NEW --dry-run=True
+```
+
+Just check which volumes in the input folder that are new or have updated files. The volumes will be added to the db unde the table "journal_volume"
 ```
 docker exec -it ads_scan_explorer_pipeline python run.py --input-folder=/opt/ADS_scans_sample/ NEW --process=False
 ```
 
-Process all volumes with new or update status, updating the db and ocr index but leaving the heaveir task of uploading all image files to the S3 Bucket
+Process all volumes with new or update status, updating the db and ocr index but leaving the heavier task of uploading all image files to the S3 Bucket
 ```
-docker exec -it ads_scan_explorer_pipeline python run.py --input-folder=/opt/ADS_scans_sample/ --upload-files=n --index-ocr=y NEW --process=True
+docker exec -it ads_scan_explorer_pipeline python run.py --input-folder=/opt/ADS_scans_sample/ --upload-files=n --index-ocr=y --upload-db=y NEW --process=True
 ```
 
 Process a single or multiple volumes by id. Will be processed/reprocessed disregarding previous status. Id is either volume id (uuid) or journal + volume. Multiple ids can be input comma separated
