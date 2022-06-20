@@ -52,6 +52,13 @@ if __name__ == '__main__':
                 type=str,
                 help="If detected volumes should be processed")
 
+    new_parser.add_argument("--dry-run",
+                dest="dry_run",
+                required=False,
+                default="True",
+                type=str,
+                help="If volume detection should just be dry_run")
+
     run_parser.add_argument('--id',
                         dest='ids',
                         nargs='+',
@@ -82,8 +89,11 @@ if __name__ == '__main__':
             process = False 
             if bool(strtobool(args.process)):
                 process = True
+            dry_run = False 
+            if bool(strtobool(args.dry_run)):
+                dry_run = True
             logger.info("Process all new volumes in: %s", input_folder)
-            task_process_new_volumes.delay(input_folder, upload, ocr, process, upload_db)
+            task_process_new_volumes.delay(input_folder, upload, ocr, upload_db, process, dry_run)
         elif args.action == "SINGLE":
             for id in args.ids:
                 logger.info("Process volume: %s in: %s", id, input_folder)

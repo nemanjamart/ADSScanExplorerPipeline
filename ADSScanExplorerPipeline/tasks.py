@@ -158,7 +158,7 @@ def task_index_ocr_files_for_volume(base_path: str, journal_volume_id: str):
     return session
 
 @app.task(queue='process-new-volumes')
-def task_process_new_volumes(base_path: str, upload_files: bool = False, index_ocr: bool = False,  upload_db: bool = True, process: bool = True):
+def task_process_new_volumes(base_path: str, upload_files: bool = False, index_ocr: bool = False,  upload_db: bool = True, process: bool = True, dry_run: bool = False):
     """
     Investigate if any new or updated volumes exists and process them if process flag is set to True
     """
@@ -171,17 +171,23 @@ def task_process_new_volumes(base_path: str, upload_files: bool = False, index_o
                 if vol.file_hash != existing_vol.file_hash:
                         existing_vol.status = VolumeStatus.Update
                         existing_vol.file_hash = vol.file_hash
-                        session.add(existing_vol)
+                        if dry_run:
+                            logger.info("DRY RUN: Volume: %s would have been updated", str(vol.id))
+                        else:
+                            session.add(existing_vol)
             else:
                 if vol.status != VolumeStatus.Error:
                     vol.status = VolumeStatus.New
-                session.add(vol)
+                if dry_run:
+                    logger.info("DRY RUN: Volume: %s would have been added", str(vol.id))
+                else:
+                    session.add(existing_vol)
                 
         for vol in JournalVolume.get_to_be_processed(session):
             volumes_to_process.append(vol.id)
-    if process:
+    if process and not dry_run:
         for vol_id in volumes_to_process:
-            task_process_volume.delay(base_path, vol_id, upload_files, index_ocr, upload_db)
+            task_process_volume.delay(base_path, vol_id, upload_files, index_ocr, upload_db, dry_run)
     return session
 
 if __name__ == '__main__':
