@@ -29,7 +29,10 @@ class TestModels(unittest.TestCase):
     @patch('ADSScanExplorerPipeline.models.JournalVolume.get_from_id_or_name')
     def test_task_process_volume(self, get_from_id_or_name, session_scope):
         vol = JournalVolume("seri", "test.", "0001")
-        vol.id = '60181735-6f0c-47a6-bf9d-47a1f1fc4fc4'
+        #Preset these to done to get Done status in the end
+        vol.bucket_uploaded = True
+        vol.db_uploaded = True
+        vol.ocr_uploaded = True
         get_from_id_or_name.return_value = vol
 
         expected_page =  Page("0000255,001", vol.id)
@@ -43,7 +46,7 @@ class TestModels(unittest.TestCase):
         session = UnifiedAlchemyMagicMock()
         session_scope.return_value = session
 
-        used_session = task_process_volume(self.data_folder, vol.id)
+        used_session = task_process_volume(self.data_folder, vol.id, upload_files=False, index_ocr=False, upload_db=False)
         for vol in used_session.query(JournalVolume).filter(JournalVolume.journal == "").all():
             self.assertEqual(vol.type, "seri")
             self.assertEqual(vol.journal, "test.")
@@ -94,7 +97,6 @@ class TestModels(unittest.TestCase):
     def test_task_upload_image_files_for_volume(self, get_from_name_and_journal, get_all_from_volume, get_from_id_or_name, session_scope):
         
         vol = JournalVolume("seri", "test.", "0001")
-        vol.id = '60181735-6f0c-47a6-bf9d-47a1f1fc4fc4'
         get_from_id_or_name.return_value = vol
 
         expected_page =  Page("0000255,001", vol.id)
@@ -125,14 +127,12 @@ class TestModels(unittest.TestCase):
     @patch('opensearchpy.OpenSearch')
     def test_task_index_ocr_files_for_volume(self, OpenSearch, get_all_from_volume, get_from_id_or_name, session_scope):
         vol = JournalVolume("seri", "test.", "0001")
-        vol.id = '60181735-6f0c-47a6-bf9d-47a1f1fc4fc4'
         get_from_id_or_name.return_value = vol
         
         session = UnifiedAlchemyMagicMock()
         session_scope.return_value = session
 
         expected_page =  Page("0000255,001", vol.id)
-        expected_page.id = "7385f212-d403-46bd-b235-96d6da01ce0c"
         get_all_from_volume.return_value = [expected_page]
 
         used_session = task_index_ocr_files_for_volume(self.data_folder, vol.id)
@@ -141,4 +141,35 @@ class TestModels(unittest.TestCase):
         
         OpenSearch.assert_called()
         OpenSearch.return_value.delete_by_query.assert_called()
-        self.assertEqual("{'page_id': '7385f212-d403-46bd-b235-96d6da01ce0c', 'volume_id': '60181735-6f0c-47a6-bf9d-47a1f1fc4fc4', 'text': 'test ocr text', 'article_ids': []}" , str(OpenSearch.return_value.index.call_args_list[0][1]['body']))
+        self.assertEqual("{'page_id': 'test.0001_0000255,001', 'volume_id': 'test.0001', 'text': 'test ocr text', 'article_ids': []}" , str(OpenSearch.return_value.index.call_args_list[0][1]['body']))
+
+    @patch('ADSScanExplorerPipeline.app.ADSScanExplorerPipeline.session_scope')
+    @patch('ADSScanExplorerPipeline.models.JournalVolume.get_from_id_or_name')
+    @patch('requests.put')
+    def test_task_task_upload_db_for_volume(self, mock_put, get_from_id_or_name, session_scope):
+        vol = JournalVolume("seri", "test.", "0001")
+        get_from_id_or_name.return_value = vol
+
+        session = UnifiedAlchemyMagicMock()
+        session_scope.return_value = session
+       
+        mock_return = MagicMock()
+        mock_return.status_code = 200
+        mock_put.return_value = mock_return
+
+        used_session = task_process_volume(self.data_folder, vol.id, upload_files=False, index_ocr=False, upload_db=True)
+        
+        expected_request_args = {'type': 'seri', 'journal': 'test.', 'volume': '0001', 'pages': [{'name': '0000255,001', 'label': '255-01', 'format': 'image/tiff', 'color_type': 'Greyscale', 'page_type': 'FrontMatter', 'width': 3904, 'height': 5312, 'volume_running_page_num': 1, 'articles': [{'bibcode': 'test......001..test'}]}]}
+        from adsputils import load_config
+        proj_home = os.path.realpath(os.path.join(os.path.dirname(__file__), '../../'))
+        config = load_config(proj_home=proj_home)
+        url = config.get('SERVICE_DB_PUSH_URL' ,'')
+        mock_put.assert_called()    
+        mock_put.assert_called_with(url, json=expected_request_args )
+
+        for vol in used_session.query(JournalVolume).filter(JournalVolume.journal == "").all():
+            print(vol)
+            self.assertEqual(vol.type, "seri")
+            self.assertEqual(vol.journal, "test.")
+            self.assertEqual(vol.volume, "0001")
+            self.assertEqual(vol.status, VolumeStatus.Processing)
