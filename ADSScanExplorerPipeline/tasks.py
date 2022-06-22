@@ -181,7 +181,7 @@ def task_process_new_volumes(base_path: str, upload_files: bool = False, index_o
                 if dry_run:
                     logger.info("DRY RUN: Volume: %s would have been added", str(vol.id))
                 else:
-                    session.add(existing_vol)
+                    session.add(vol)
                 
         for vol in JournalVolume.get_to_be_processed(session):
             volumes_to_process.append(vol.id)
