@@ -3,7 +3,8 @@ import requests
 import os
 import uuid
 from ADSScanExplorerPipeline.models import JournalVolume, VolumeStatus
-from ADSScanExplorerPipeline.ingestor import parse_top_file, parse_dat_file, parse_image_files, identify_journals, upload_image_files, check_all_image_files_exists, index_ocr_files, set_ingestion_error_status
+from ADSScanExplorerPipeline.ingestor import parse_top_file, parse_dat_file, parse_image_files, identify_journals, upload_image_files
+from ADSScanExplorerPipeline.ingestor import check_all_image_files_exists, index_ocr_files, set_ingestion_error_status, set_correct_volume_status
 from kombu import Queue
 import ADSScanExplorerPipeline.app as app_module
 from adsputils import load_config
@@ -62,8 +63,7 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
                 session.add(page)
 
             vol.db_done = True
-            vol.status_message = None
-            session.add(vol)
+            set_correct_volume_status(vol, session)
             
         except Exception as e:
             session.rollback()
@@ -81,15 +81,13 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
         task_upload_db_for_volume.delay(journal_volume_id)
 
 
-    vol.status = VolumeStatus.Done
-    session.add(vol)
-    session.commit()    
+    set_correct_volume_status(vol, session)   
     return session
 
 @app.task(queue='process-volume')
 def task_upload_db_for_volume(journal_volume_id: str):
     """
-    Processes a journal volume
+    Uploads the DB metadata to the service DB through a API call to the service
     """
     logger.info("Uploading db for journal_volume id: %s", journal_volume_id)
     error_msg = ""  
@@ -99,10 +97,10 @@ def task_upload_db_for_volume(journal_volume_id: str):
             vol = JournalVolume.get_from_id_or_name(journal_volume_id, session)
             url = config.get('SERVICE_DB_PUSH_URL' ,'')
             x = requests.put(url, json = vol.to_dict())
+            logger.info(x)
             if x.status_code == 200:
                 vol.db_uploaded = True
-                vol.status_message = None
-                session.add(vol)
+                set_correct_volume_status(vol, session)
             else:
                 raise Exception(x.content)
         except Exception as e:
@@ -147,8 +145,7 @@ def task_index_ocr_files_for_volume(base_path: str, journal_volume_id: str):
             ocr_path = os.path.join(base_path, config.get('OCR_SUB_DIR', ''), vol.type, vol.journal, vol.volume)
             index_ocr_files(ocr_path, vol, session)
             vol.ocr_uploaded = True
-            vol.status_message = None
-            session.add(vol)
+            set_correct_volume_status(vol, session)
         except Exception as e:
             session.rollback()
             logger.warn("Failed to index ocr files from journal_volume_id: %s due to: %s", str(journal_volume_id), e)

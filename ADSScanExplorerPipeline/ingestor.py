@@ -276,3 +276,11 @@ def set_ingestion_error_status(session: Session, journal_volume_id: str, error_m
         session.commit()
     except Exception as e:
         logger.error("Failed setting error on volume: %s due to: %s", str(journal_volume_id), e)
+
+def set_correct_volume_status(vol: JournalVolume, session: Session):
+    if vol.status != VolumeStatus.Error:
+        vol.status_message = ""
+        if vol.bucket_uploaded and vol.db_done and vol.db_uploaded and vol.ocr_uploaded:
+            vol.status = VolumeStatus.Done
+        session.add(vol)
+        session.commit()
