@@ -80,8 +80,6 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
     if upload_db:
         task_upload_db_for_volume.delay(journal_volume_id)
 
-
-    set_correct_volume_status(vol, session)   
     return session
 
 @app.task(queue='process-volume')
@@ -184,7 +182,7 @@ def task_process_new_volumes(base_path: str, upload_files: bool = False, index_o
             volumes_to_process.append(vol.id)
     if process and not dry_run:
         for vol_id in volumes_to_process:
-            task_process_volume.delay(base_path, vol_id, upload_files, index_ocr, upload_db, dry_run)
+            task_process_volume.delay(base_path, vol_id, upload_files, index_ocr, upload_db)
     return session
 
 if __name__ == '__main__':
