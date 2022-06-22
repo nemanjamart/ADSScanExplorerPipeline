@@ -164,8 +164,9 @@ class TestModels(unittest.TestCase):
         proj_home = os.path.realpath(os.path.join(os.path.dirname(__file__), '../../'))
         config = load_config(proj_home=proj_home)
         url = config.get('SERVICE_DB_PUSH_URL' ,'')
+        auth_token = config.get('SERVICE_AUTHENTICATION_TOKEN' ,'')
         mock_put.assert_called()    
-        mock_put.assert_called_with(url, json=expected_request_args )
+        mock_put.assert_called_with(url, json=expected_request_args, headers={'Authorization': 'Bearer:' + auth_token})
 
         for vol in used_session.query(JournalVolume).filter(JournalVolume.journal == "").all():
             print(vol)
