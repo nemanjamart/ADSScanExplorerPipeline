@@ -15,7 +15,7 @@ class TestIngestor(unittest.TestCase):
     def test_vol_hash(self):
         vol = JournalVolume("seri", "test.", "0001")
         hash = hash_volume(self.data_folder, vol)
-        self.assertEqual(hash, "8ac17da872b75369e2ad6a8612a92244")
+        self.assertEqual(hash, "18cb4411e0a06defb0a5005cd8ab1fd0")
     
     def test_parse_volume(self):
         vol = JournalVolume("seri", "test.", "0001")

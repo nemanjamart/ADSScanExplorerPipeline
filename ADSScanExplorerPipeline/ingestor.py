@@ -241,26 +241,26 @@ def parse_volume_from_top_file(filename : str, journal : str):
 
 def hash_volume(base_path: str, vol: JournalVolume) -> str:
     """
-    Calculates a md5 hash from the change dates of all the associated images and files to the volume  
+    Calculates a md5 hash from the change dates and name of all the associated images and files to the volume  
     """
     vol_hash = ""
     list_path = os.path.join(base_path, config.get('TOP_SUB_DIR', '') ,vol.type, vol.journal)
     for file in os.listdir(list_path):
         file_path = os.path.join(list_path, file)
         modified_time = os.path.getmtime(file_path)
-        vol_hash = md5((vol_hash + str(modified_time)).encode("utf-8")).hexdigest()
+        vol_hash = md5((vol_hash + str(modified_time) + file).encode("utf-8")).hexdigest()
     
     image_path = os.path.join(base_path, config.get('BITMAP_SUB_DIR', '') ,vol.type, vol.journal, vol.volume, "600")
     for file in os.listdir(image_path):
         file_path = os.path.join(image_path, file)
         modified_time = os.path.getmtime(file_path)
-        vol_hash = md5((vol_hash + str(modified_time)).encode("utf-8")).hexdigest()
+        vol_hash = md5((vol_hash + str(modified_time) + file).encode("utf-8")).hexdigest()
 
     ocr_path = os.path.join(base_path, config.get('OCR_SUB_DIR', '') ,vol.type, vol.journal, vol.volume)
     for file in os.listdir(ocr_path):
         file_path = os.path.join(ocr_path, file)
         modified_time = os.path.getmtime(file_path)
-        vol_hash = md5((vol_hash + str(modified_time)).encode("utf-8")).hexdigest()
+        vol_hash = md5((vol_hash + str(modified_time) + file).encode("utf-8")).hexdigest()
         
     return vol_hash
 
