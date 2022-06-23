@@ -246,9 +246,10 @@ def hash_volume(base_path: str, vol: JournalVolume) -> str:
     vol_hash = ""
     list_path = os.path.join(base_path, config.get('TOP_SUB_DIR', '') ,vol.type, vol.journal)
     for file in os.listdir(list_path):
-        file_path = os.path.join(list_path, file)
-        modified_time = os.path.getmtime(file_path)
-        vol_hash = md5((vol_hash + str(modified_time) + file).encode("utf-8")).hexdigest()
+        if str(vol.volume) in file:
+            file_path = os.path.join(list_path, file)
+            modified_time = os.path.getmtime(file_path)
+            vol_hash = md5((vol_hash + str(modified_time) + file).encode("utf-8")).hexdigest()
     
     image_path = os.path.join(base_path, config.get('BITMAP_SUB_DIR', '') ,vol.type, vol.journal, vol.volume, "600")
     for file in os.listdir(image_path):
