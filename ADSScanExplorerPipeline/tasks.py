@@ -191,6 +191,10 @@ def task_process_new_volumes(base_path: str, upload_files: bool = False, index_o
             if existing_vol:
                 if vol.file_hash != existing_vol.file_hash:
                         existing_vol.status = VolumeStatus.Update
+                        existing_vol.db_done = False
+                        existing_vol.db_uploaded = False
+                        existing_vol.bucket_uploaded = False
+                        existing_vol.ocr_uploaded = False
                         existing_vol.file_hash = vol.file_hash
                         if dry_run:
                             logger.info("DRY RUN: Volume: %s would have been updated", str(vol.id))
