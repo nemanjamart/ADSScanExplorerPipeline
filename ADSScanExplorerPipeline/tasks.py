@@ -33,6 +33,39 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
     logger.info("Processing journal_volume id: %s", journal_volume_id)
     error_msg = ""  
     with app.session_scope() as session:
+        try:
+            vol = JournalVolume.get_from_id_or_name(journal_volume_id, session)
+            vol.status = VolumeStatus.Processing
+            session.add(vol)
+            session.commit()
+
+            if not vol.db_done:
+                task_process_db_for_volume(base_path, journal_volume_id)
+
+            #Need to reload the volume to this session since it's been updated
+            vol = JournalVolume.get_from_id_or_name(journal_volume_id, session)
+
+            if upload_db and vol.db_done and not vol.db_uploaded:
+                task_upload_db_for_volume.delay(journal_volume_id)
+
+            if index_ocr and vol.db_done and not vol.ocr_uploaded:
+                task_index_ocr_files_for_volume.delay(base_path, journal_volume_id)
+
+            if upload_files and vol.db_done and not vol.bucket_uploaded:
+                task_upload_image_files_for_volume.delay(base_path, journal_volume_id)
+
+        except Exception as e:
+            session.rollback()
+            logger.error("Failed to get journal_volume: %s from db: %s", journal_volume_id, e)
+            return
+    return session
+
+@app.task(queue='process-volume')
+def task_process_db_for_volume(base_path: str, journal_volume_id: str):
+    logger.info("Processing db for journal_volume id: %s", journal_volume_id)
+    error_msg = ""  
+
+    with app.session_scope() as session:
         vol = None
         try:
             vol = JournalVolume.get_from_id_or_name(journal_volume_id, session)
@@ -72,15 +105,8 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
     if error_msg != "":
         set_ingestion_error_status(session, journal_volume_id, error_msg)
         return
-    
-    if upload_files:
-        task_upload_image_files_for_volume.delay(base_path, journal_volume_id)
-    if index_ocr:
-        task_index_ocr_files_for_volume.delay(base_path, journal_volume_id)
-    if upload_db:
-        task_upload_db_for_volume.delay(journal_volume_id)
-
     return session
+
 
 @app.task(queue='process-volume')
 def task_upload_db_for_volume(journal_volume_id: str):
@@ -96,7 +122,6 @@ def task_upload_db_for_volume(journal_volume_id: str):
             url = config.get('SERVICE_DB_PUSH_URL' ,'')
             auth_token = config.get('SERVICE_AUTHENTICATION_TOKEN' ,'')
             x = requests.put(url, json = vol.to_dict(), headers = {'Authorization': 'Bearer:' + auth_token} )
-            logger.info(x)
             if x.status_code == 200:
                 vol.db_uploaded = True
                 set_correct_volume_status(vol, session)
