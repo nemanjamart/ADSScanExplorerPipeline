@@ -206,7 +206,11 @@ def index_ocr_files(ocr_path: str, vol: JournalVolume, session: Session):
                 'page_id': page.id,
                 'volume_id': vol.id,
                 'text':  html.unescape(file.read()),
-                'article_ids': articles
+                'article_bibcodes': articles,
+                'journal': vol.journal,
+                'page_type': page.page_type.name,
+                'page_number': page.volume_running_page_num,
+                'page_label': page.label
             }
             opensearch.index(index=config.get("OPEN_SEARCH_INDEX", ""), body=doc)
         
