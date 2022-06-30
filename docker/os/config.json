@@ -33,10 +33,32 @@
         "type": "keyword"
       },
       "volume_id": {
+        "type": "keyword",
+        "copy_to": "volume_id_lowercase" 
+      },
+      "volume_id_lowercase": {
+        "type": "keyword",
+        "normalizer": "lowercase"
+      },
+      "journal": {
         "type": "keyword"
       },
-      "article_ids": {
+      "article_bibcodes": {
+        "type": "keyword",
+        "copy_to": "article_bibcodes_lowercase" 
+      },
+      "article_bibcodes_lowercase": {
+        "type": "keyword",
+        "normalizer": "lowercase"
+      },
+      "page_type": {
         "type": "keyword"
+      },
+      "page_number": {
+        "type": "integer"
+      },
+      "page_label": {
+        "type": "text"
       }
     },
     "dynamic": false
