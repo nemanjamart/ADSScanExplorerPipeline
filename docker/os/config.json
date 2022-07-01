@@ -41,6 +41,10 @@
         "normalizer": "lowercase"
       },
       "journal": {
+        "type": "keyword",
+        "normalizer": "lowercase"
+      },
+      "volume": {
         "type": "keyword"
       },
       "article_bibcodes": {
