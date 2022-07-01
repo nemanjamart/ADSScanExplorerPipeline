@@ -208,6 +208,7 @@ def index_ocr_files(ocr_path: str, vol: JournalVolume, session: Session):
                 'text':  html.unescape(file.read()),
                 'article_bibcodes': articles,
                 'journal': vol.journal,
+                'volume': vol.volume,
                 'page_type': page.page_type.name,
                 'page_number': page.volume_running_page_num,
                 'page_label': page.label
