@@ -1,7 +1,5 @@
-from concurrent.futures import process
 import requests
 import os
-import uuid
 from ADSScanExplorerPipeline.models import JournalVolume, VolumeStatus
 from ADSScanExplorerPipeline.ingestor import parse_top_file, parse_dat_file, parse_image_files, identify_journals, upload_image_files
 from ADSScanExplorerPipeline.ingestor import check_all_image_files_exists, index_ocr_files, set_ingestion_error_status, set_correct_volume_status
@@ -26,16 +24,20 @@ app.conf.CELERY_QUEUES = (
 # ============================= TASKS ============================================= #
 
 @app.task(queue='process-volume')
-def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bool = False, index_ocr: bool = False, upload_db: bool = True):
+def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bool = False, index_ocr: bool = False, upload_db: bool = True, force_update: bool = False):
     """
     Processes a journal volume
     """
     logger.info("Processing journal_volume id: %s", journal_volume_id)
-    error_msg = ""  
     with app.session_scope() as session:
         try:
             vol = JournalVolume.get_from_id_or_name(journal_volume_id, session)
-            vol.status = VolumeStatus.Processing
+            if force_update:
+                set_force_update_parameters(vol)
+                vol.status = VolumeStatus.Processing
+            elif vol.status != VolumeStatus.Done:
+                vol.status = VolumeStatus.Processing
+
             session.add(vol)
             session.commit()
 
@@ -44,21 +46,28 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
 
             #Need to reload the volume to this session since it's been updated
             vol = JournalVolume.get_from_id_or_name(journal_volume_id, session)
-
             if upload_db and vol.db_done and not vol.db_uploaded:
-                task_upload_db_for_volume.delay(journal_volume_id)
+                task_upload_db_for_volume(journal_volume_id)
 
+            vol = JournalVolume.get_from_id_or_name(journal_volume_id, session)
             if index_ocr and vol.db_done and not vol.ocr_uploaded:
-                task_index_ocr_files_for_volume.delay(base_path, journal_volume_id)
-
+                task_index_ocr_files_for_volume(base_path, journal_volume_id)
+            
+            vol = JournalVolume.get_from_id_or_name(journal_volume_id, session)
             if upload_files and vol.db_done and not vol.bucket_uploaded:
-                task_upload_image_files_for_volume.delay(base_path, journal_volume_id)
+                task_upload_image_files_for_volume(base_path, journal_volume_id)
 
         except Exception as e:
             session.rollback()
             logger.error("Failed to get journal_volume: %s from db: %s", journal_volume_id, e)
             return
     return session
+
+def set_force_update_parameters(vol: JournalVolume):
+    vol.db_done = False
+    vol.bucket_uploaded = False
+    vol.ocr_uploaded = False
+    vol.db_uploaded = False
 
 @app.task(queue='process-volume')
 def task_process_db_for_volume(base_path: str, journal_volume_id: str):
