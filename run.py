@@ -97,4 +97,4 @@ if __name__ == '__main__':
         elif args.action == "SINGLE":
             for id in args.ids:
                 logger.info("Process volume: %s in: %s", id, input_folder)
-                task_process_volume.delay(input_folder, id, upload, ocr, upload_db)
+                task_process_volume.delay(input_folder, id, upload, ocr, upload_db, force_update=True)
