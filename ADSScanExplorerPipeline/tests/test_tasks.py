@@ -133,6 +133,7 @@ class TestModels(unittest.TestCase):
         session_scope.return_value = session
 
         expected_page =  Page("0000255,001", vol.id)
+        expected_page.journal_volume = vol
         get_all_from_volume.return_value = [expected_page]
 
         used_session = task_index_ocr_files_for_volume(self.data_folder, vol.id)
@@ -141,7 +142,8 @@ class TestModels(unittest.TestCase):
         
         OpenSearch.assert_called()
         OpenSearch.return_value.delete_by_query.assert_called()
-        self.assertEqual("{'page_id': 'test.0001_0000255,001', 'volume_id': 'test.0001', 'text': 'test ocr text', 'article_ids': []}" , str(OpenSearch.return_value.index.call_args_list[0][1]['body']))
+        self.assertEqual("{'page_id': 'test.0001_0000255,001', 'volume_id': 'test.0001', 'text': 'test ocr text', 'article_bibcodes': [], 'journal': 'test.', 'volume': '0001', 'page_type': 'FrontMatter', 'page_number': None, 'page_label': '255-1', 'page_color': 'BW', 'project': ''}",
+            str(OpenSearch.return_value.index.call_args_list[0][1]['body']))
 
     @patch('ADSScanExplorerPipeline.app.ADSScanExplorerPipeline.session_scope')
     @patch('ADSScanExplorerPipeline.models.JournalVolume.get_from_id_or_name')
