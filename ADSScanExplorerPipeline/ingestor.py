@@ -195,26 +195,49 @@ def index_ocr_files(ocr_path: str, vol: JournalVolume, session: Session):
     ocr_list = os.listdir(ocr_path)
     for page in Page.get_all_from_volume(vol.id, session):
         ocr_filename = page.name + ".txt"
+        page_text = ''
         if ocr_filename not in ocr_list:
             logger.info("Missing ocr file " + page.name)
-            continue
-        with open(os.path.join(ocr_path, ocr_filename)) as file:    
-            articles = []
-            for article in page.articles:
-                articles.append(article.bibcode)
-            doc = {
-                'page_id': page.id,
-                'volume_id': vol.id,
-                'text':  html.unescape(file.read()),
-                'article_bibcodes': articles,
-                'journal': vol.journal,
-                'volume': vol.volume,
-                'page_type': page.page_type.name,
-                'page_number': page.volume_running_page_num,
-                'page_label': page.label
-            }
-            opensearch.index(index=config.get("OPEN_SEARCH_INDEX", ""), body=doc)
+        else:
+            with open(os.path.join(ocr_path, ocr_filename)) as file:    
+                page_text = html.unescape(file.read())
+        articles = []
+        for article in page.articles:
+            articles.append(article.bibcode)
+        doc = {
+            'page_id': page.id,
+            'volume_id': vol.id,
+            'text':  page_text,
+            'article_bibcodes': articles,
+            'journal': vol.journal,
+            'volume': vol.volume,
+            'page_type': page.page_type.name,
+            'page_number': page.volume_running_page_num,
+            'page_label': page.label,
+            'page_color': page.color_type.name,
+            'project': get_project_from_journal_name(page.journal_volume.journal)
+        }
+        opensearch.index(index=config.get("OPEN_SEARCH_INDEX", ""), body=doc)
         
+def get_project_from_journal_name(journal_name:str):
+    historical_journals = ['BuAst', 'OSUC.', 'BuChr', 'DurOO', 'POPot', 'GOAM.', 'PGenA', 'JBAA.', 'AnHar', 'ViHei', 'AnGVP', 'MiGoe', 'PA...', 'PSprO', 'MMAAR', 'VeLdn',
+        'BuAsR', 'VeJen', 'MelAR', 'AnLL.', 'HarCi', 'PWasO', 'MiPul', 'DAOAR', 'BuAsI', 'BKUJ.', 'KVeBB', 'AnBog', 'OxfOO', 'PAICU', 'MadOO', 'LicOB', 'YerOB', 'AFChr', 
+        'DunOP', 'AnBos', 'AnBor', 'VeBam', 'VeHei', 'CiUO.', 'RGOO.', 'POBol', 'MadOb', 'VeABD', 'PUSNO', 'MiSon', 'BTasO', 'VeBab', 'USNOY', 'Astr.', 'AnTou', 'ABSBe', 
+        'PWHHO', 'USNOO', 'USNOM', 'MiBre', 'PAIKH', 'HarAR', 'AnEdi', 'AnMuS', 'OAORP', 'POslO', 'PUAms', 'KNAB.', 'WilOO', 'MelOO', 'AnAth', 'LowOB', 'HarRe', 'AnSWi', 
+        'PCinO', 'VatRA', 'PTarO', 'AAHam', 'RAROC', 'CMWCI', 'MmBAA', 'VeMun', 'MiHam', 'PDDO.', 'POMil', 'MWOAR', 'AnCoi', 'AnBes', 'BUBes', 'USNOA', 'POMic', 'CoRut', 
+        'AOTok', 'PLicO', 'ROCi.', 'PGooO', 'HelOB', 'TrTas', 'RAOU.', 'PCooO', 'AbbOO', 'YalRY', 'PYerO', 'RMROC', 'PTasO', 'GOAMM', 'YalOY', 'AnMun', 'AnOBN', 'BMOE.', 
+        'TOYal', 'AnOSt', 'PGro.', 'AnLun', 'MiZur', 'HarOR', 'VeBB.', 'MNSSA', 'AnLei', 'PODE.', 'BSAFR', 'AnLuS', 'MmMtS', 'AnCap', 'HarPa', 'MtWAR', 'BSBA.', 'TsTas', 
+        'AnSAO', 'VatPS', 'BESBe', 'BuBIH', 'AnWiD', 'MmSS.', 'VeLei', 'MmSSI', 'SidM.', 'PVasO', 'LAstr', 'PKUJ.', 'OSFOT', 'RNAO.', 'PDAO.', 'AnOB.', 'WinAR', 'AnWie', 
+        'VeKAB', 'PMcCO', 'AnPOb', 'GORO.', 'TvOC.', 'SRMO.', 'RGAO.', 'TIUCS', 'PF+CO', 'LPlaS', 'BKAD.', 'IORA.', 'PRCO.', 'MNSSJ', 'CoPri', 'StoAn', 'POLyo', 'PPCAS', 
+        'AnLow', 'AReg.', 'AnPar', 'CoLic', 'AnDea', 'PLPla', 'IORP.', 'CoKon', 'KodOB', 'YalAR', 'PDO..', 'AnNic', 'LawOB', 'TOMar', 'PCopO', 'VeBon', 'PLAGL', 'PAAS.', 
+        'GVPOO', 'AnBru', 'CoMtW', 'VeGoe', 'MmArS', 'PKirO', 'AnRio', 'MmArc', 'MmEbr', 'AnStr', 'GazA.', 'AnOLL', 'ABMun', 'IORAS', 'BuLyo', 'SydOP']
+    phaedra_journals = ['phae.']
+    if journal_name in historical_journals:
+        return 'Historical Literature'
+    if journal_name in phaedra_journals:
+        return 'PHaEDRA'
+    return ''
+
 def identify_journals(input_folder_path : str) -> Iterable[JournalVolume]:
     """
     Loops through the base folder to identify all journal volumnes that exists

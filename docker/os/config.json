@@ -1,5 +1,6 @@
 {
   "settings": {
+    "number_of_shards": 5,
     "index": {
       "analysis": {
         "analyzer": {
@@ -63,8 +64,14 @@
       },
       "page_label": {
         "type": "text"
+      },
+      "page_color": {
+        "type": "keyword"
+      },
+      "project": {
+        "type": "keyword"
       }
     },
-    "dynamic": false
-  }  
+    "dynamic": true
+  }
 }
