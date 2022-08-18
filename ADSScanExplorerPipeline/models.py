@@ -109,8 +109,8 @@ class JournalVolume(Base, Timestamp):
         }
 
 page_article_association_table = Table('page2article', Base.metadata,
-    Column('page_id', ForeignKey('page.id'), primary_key=True),
-    Column('article_id', ForeignKey('article.bibcode'), primary_key=True)
+    Column('page_id', ForeignKey('page.id'), primary_key=True, index=True),
+    Column('article_id', ForeignKey('article.bibcode'), primary_key=True, index=True)
 )
 
 class Article(Base, Timestamp):
