@@ -57,6 +57,9 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
             if upload_files and vol.db_done and not vol.bucket_uploaded:
                 task_upload_image_files_for_volume(base_path, journal_volume_id)
 
+            vol = JournalVolume.get_from_id_or_name(journal_volume_id, session)
+            set_correct_volume_status(vol, session)
+
         except Exception as e:
             session.rollback()
             logger.error("Failed to get journal_volume: %s from db: %s", journal_volume_id, e)
