@@ -66,6 +66,10 @@ class TestIngestor(unittest.TestCase):
         name, label = split_top_map_row("A000136.000 A261/A262 P")
         self.assertEqual(name, "A000136P000")
         self.assertEqual(label, "A261/A262")
+        
+        name, label = split_top_map_row("A000136.000 A261/A262 M")
+        self.assertEqual(name, "A000136M000")
+        self.assertEqual(label, "A261/A262")
 
     @patch('sqlalchemy.orm.Session')
     def test_parse_top_file(self, Session):

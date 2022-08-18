@@ -41,6 +41,7 @@ class PageType(enum.Enum):
             ':': cls.BackMatter,
             'I': cls.Insert,
             'P': cls.Plate,
+            'M': cls.Normal,
         }[separator]
 
 class JournalVolume(Base, Timestamp):

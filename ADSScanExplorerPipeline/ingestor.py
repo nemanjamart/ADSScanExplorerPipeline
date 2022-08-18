@@ -3,7 +3,7 @@ import os
 import html
 from hashlib import md5
 from typing import Iterable
-from ADSScanExplorerPipeline.models import JournalVolume, Page, Article, PageColor, VolumeStatus
+from ADSScanExplorerPipeline.models import JournalVolume, Page, Article, PageColor, VolumeStatus, PageType
 from ADSScanExplorerPipeline.exceptions import MissingImageFileException
 import opensearchpy
 from sqlalchemy.orm import Session
@@ -34,24 +34,29 @@ def parse_top_file(file_path: str, journal_volume: JournalVolume, session: Sessi
     if os.path.exists(topmap_filepath):
         file_path = topmap_filepath
         is_map_file = True
+    running_page_num = 0
     with open(file_path) as file:
-        line_num = 0
         for line in file:
-            line_num += 1
-            if line_num < 5: #Top file contains 4 header lines
-                continue
-            running_page_num = line_num - 4
-
             if is_map_file:
                 page_name, label = split_top_map_row(line)
             else:
                 page_name, label = split_top_row(line)
+            if check_page_name_is_valid(page_name):
+                running_page_num += 1
+                page = Page.get_or_create(page_name, journal_volume.id, session)
+                page.volume_running_page_num = running_page_num
+                if label:
+                    page.label = label
+                yield page
 
-            page = Page.get_or_create(page_name, journal_volume.id, session)
-            page.volume_running_page_num = running_page_num
-            if label:
-                page.label = label
-            yield page
+def check_page_name_is_valid(page_name: str):
+    if len(page_name) == 11:
+        try:
+            PageType.page_type_from_separator(page_name[7])
+            return True
+        except:
+            return False
+    return False
 
 def split_top_map_row(line: str):
     """ Function to solit the lines in a.top.map file.
@@ -74,6 +79,8 @@ def split_top_map_row(line: str):
             name = name.replace(".", "I")
         elif type == "P":
             name = name.replace(".", "P")
+        elif type == "M":
+            name = name.replace(".", "M")
     return name, label
 
 def split_top_row(line: str):
@@ -100,13 +107,14 @@ def parse_dat_file(file_path: str, journal_volume: JournalVolume, session: Sessi
             article.pages = []
             first = True
             for page_name in line_split[3:]:
-                if len(page_name) != 11:
+                if not check_page_name_is_valid(page_name):
                     continue
                 page = Page.get_from_name_and_journal(page_name, journal_volume.id, session)
                 if first:
                     article.start_page_number = page.volume_running_page_num
                     first = False
-                article.pages.append(page)
+                if page not in article.pages:
+                    article.pages.append(page)
             yield article
 
 def check_all_image_files_exists(image_path: str, journal_volume: JournalVolume, session: Session):
