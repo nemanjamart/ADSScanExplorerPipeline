@@ -134,34 +134,37 @@ def parse_image_files(image_path: str, journal_volume: JournalVolume, session: S
     be either greyscale or color based on the number of channels.
     """
     for filename in os.listdir(image_path):
-        if filename.endswith(".png") or filename.endswith(".jpg"):
-            continue
-        base_filename = filename.replace(".tif", "")
-        page = Page.get_from_name_and_journal(base_filename, journal_volume.id, session)
-        if not page:
-            #Image file not in lists 
-            #TODO possibly log this somewhere
-            continue
+        try:
+            if filename.endswith(".png") or filename.endswith(".jpg"):
+                continue
+            base_filename = filename.replace(".tif", "")
+            page = Page.get_from_name_and_journal(base_filename, journal_volume.id, session)
+            if not page:
+                #Image file not in lists 
+                #TODO possibly log this somewhere
+                continue
 
-        with Image.open(os.path.join(image_path, filename)) as img:
-            meta_dict = {TAGS[key] : img.tag[key] for key in img.tag_v2}
-            width = meta_dict["ImageWidth"][0]
-            height = meta_dict["ImageLength"][0]
+            with Image.open(os.path.join(image_path, filename)) as img:
+                meta_dict = {TAGS[key] : img.tag[key] for key in img.tag_v2}
+                width = meta_dict["ImageWidth"][0]
+                height = meta_dict["ImageLength"][0]
 
-            if filename.endswith(".tif"):
-                n_samples = len(meta_dict["BitsPerSample"])
-                #The tiff images are either color if having 3 channels or greyscale if only 1 channel
-                if n_samples > 1:
-                    color = PageColor.Color
+                if filename.endswith(".tif"):
+                    n_samples = len(meta_dict["BitsPerSample"])
+                    #The tiff images are either color if having 3 channels or greyscale if only 1 channel
+                    if n_samples > 1:
+                        color = PageColor.Color
+                    else:
+                        color = PageColor.Greyscale
+                    page.color_type = color
+                    page.width = width
+                    page.height = height
                 else:
-                    color = PageColor.Greyscale
-                page.color_type = color
-                page.width = width
-                page.height = height
-            else:
-                page.width = width
-                page.height = height
-        yield page
+                    page.width = width
+                    page.height = height
+            yield page
+        except Exception as e:
+            raise Exception("Failed to parse image file: " + os.path.join(image_path, filename) + " due to: " + str(e))
 
 def upload_image_files(image_path: str, vol: JournalVolume, session: Session):
     """

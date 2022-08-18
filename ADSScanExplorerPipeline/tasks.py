@@ -1,4 +1,5 @@
 import requests
+import traceback
 import os
 from ADSScanExplorerPipeline.models import JournalVolume, VolumeStatus
 from ADSScanExplorerPipeline.ingestor import parse_top_file, parse_dat_file, parse_image_files, identify_journals, upload_image_files
@@ -112,8 +113,9 @@ def task_process_db_for_volume(base_path: str, journal_volume_id: str):
             
         except Exception as e:
             session.rollback()
-            logger.error("Failed to process journal_volume_id: %s due to: %s", str(journal_volume_id), e)
-            error_msg = str(e)
+            trace_string = traceback.format_exc()
+            error_msg = "Failed to upload db from journal_volume_id: " + str(journal_volume_id) + " due to: " + str(e) + " traceback: " + trace_string
+            logger.error(error_msg)
     if error_msg != "":
         set_ingestion_error_status(session, journal_volume_id, error_msg)
         return
@@ -141,8 +143,9 @@ def task_upload_db_for_volume(journal_volume_id: str):
                 raise Exception(x.content)
         except Exception as e:
             session.rollback()
-            logger.error("Failed to upload db from journal_volume_id: %s due to: %s", str(journal_volume_id), e)
-            error_msg = str(e)
+            trace_string = traceback.format_exc()
+            error_msg = "Failed to upload db from journal_volume_id: " + str(journal_volume_id) + " due to: " + str(e) + " traceback: " + trace_string
+            logger.error(error_msg)
     if error_msg != "":
         set_ingestion_error_status(session, journal_volume_id, error_msg)
     return session
@@ -163,8 +166,9 @@ def task_upload_image_files_for_volume(base_path: str, journal_volume_id: str):
             session.add(vol)
         except Exception as e:
             session.rollback()
-            logger.error("Failed to upload images from journal_volume_id: %s due to: %s", str(journal_volume_id), e)
-            error_msg = str(e)
+            trace_string = traceback.format_exc()
+            error_msg = "Failed to upload images from journal_volume_id: " + str(journal_volume_id) + " due to: " + str(e) + " traceback: " + trace_string
+            logger.error(error_msg)
     if error_msg != "":
         set_ingestion_error_status(session, journal_volume_id, error_msg)
     return session
@@ -184,8 +188,9 @@ def task_index_ocr_files_for_volume(base_path: str, journal_volume_id: str):
             set_correct_volume_status(vol, session)
         except Exception as e:
             session.rollback()
-            logger.warn("Failed to index ocr files from journal_volume_id: %s due to: %s", str(journal_volume_id), e)
-            error_msg = str(e)
+            trace_string = traceback.format_exc()
+            error_msg = "Failed to index ocr files from journal_volume_id: " + str(journal_volume_id) + " due to: " + str(e) + " traceback: " + trace_string
+            logger.error(error_msg)
     if error_msg != "":
         set_ingestion_error_status(session, journal_volume_id, error_msg)
     return session
