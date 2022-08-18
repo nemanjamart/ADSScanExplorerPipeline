@@ -84,7 +84,7 @@ class JournalVolume(Base, Timestamp):
     
     @classmethod
     def get_to_be_processed(cls, session: Session) -> List[JournalVolume]:
-        return session.query(cls).filter(cls.status.in_([VolumeStatus.New, VolumeStatus.Update])).all()
+        return session.query(cls).filter(cls.status.in_([VolumeStatus.New, VolumeStatus.Update, VolumeStatus.Error])).all()
 
     @classmethod
     def get_from_id_or_name(cls, id: str, session: Session) -> JournalVolume:
