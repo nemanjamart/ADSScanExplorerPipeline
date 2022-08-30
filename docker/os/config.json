@@ -20,8 +20,31 @@
             "ignore_case": true,
             "updatable": true
           }
+      },
+      "normalizer": {
+        "journal_normalizer": {
+            "type": "custom",
+            "char_filter": ["journal_filter"],
+            "filter":["lowercase"]
+          },
+            "volume_normalizer": {
+            "type": "custom",
+            "char_filter": ["volume_filter"]
+          }
+        },
+        "char_filter": {
+            "journal_filter": {
+              "type": "pattern_replace",
+              "pattern": "([^.]+)\\.*",
+              "replacement": "$1"
+            },
+            "volume_filter": {
+              "type": "pattern_replace",
+              "pattern": "0*([1-9]\\d*)",
+              "replacement": "$1"
+            }
         }
-      }
+     }
     }
   },
   "mappings": {
@@ -43,10 +66,15 @@
       },
       "journal": {
         "type": "keyword",
-        "normalizer": "lowercase"
+        "normalizer": "journal_normalizer"
       },
       "volume": {
-        "type": "keyword"
+        "type": "keyword",
+        "copy_to": "volume_int",
+        "normalizer": "volume_normalizer"
+      },
+      "volume_int": {
+        "type": "integer"
       },
       "article_bibcodes": {
         "type": "keyword",
