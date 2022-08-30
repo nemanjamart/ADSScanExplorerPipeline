@@ -99,9 +99,10 @@ def task_process_db_for_volume(base_path: str, journal_volume_id: str):
                 session.add(page)
                 vol.pages.append(page)
 
-            for article in parse_dat_file(dat_file_path, vol, session):
-                session.add(article)
-                vol.articles.append(article)
+            if os.path.exists(dat_file_path):
+                for article in parse_dat_file(dat_file_path, vol, session):
+                    session.add(article)
+                    vol.articles.append(article)
 
             check_all_image_files_exists(image_path, vol, session)
 
