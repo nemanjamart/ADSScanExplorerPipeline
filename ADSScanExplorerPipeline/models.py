@@ -22,7 +22,7 @@ class VolumeStatus(enum.Enum):
 class PageColor(enum.Enum):
     """Page Color Type"""
     BW = 1
-    Greyscale = 2
+    Grayscale = 2
     Color = 3
 
 class PageType(enum.Enum):
