@@ -131,7 +131,7 @@ def parse_image_files(image_path: str, journal_volume: JournalVolume, session: S
     """
     Loops through the volumes image files and parse out width and height from the TIFF header
     Some pages have multiple images a Black-and-White without file ending and a .tif which can
-    be either greyscale or color based on the number of channels.
+    be either grayscale or color based on the number of channels.
     """
     for filename in os.listdir(image_path):
         try:
@@ -151,11 +151,11 @@ def parse_image_files(image_path: str, journal_volume: JournalVolume, session: S
 
                 if filename.endswith(".tif"):
                     n_samples = len(meta_dict["BitsPerSample"])
-                    #The tiff images are either color if having 3 channels or greyscale if only 1 channel
+                    #The tiff images are either color if having 3 channels or grayscale if only 1 channel
                     if n_samples > 1:
                         color = PageColor.Color
                     else:
-                        color = PageColor.Greyscale
+                        color = PageColor.Grayscale
                     page.color_type = color
                     page.width = width
                     page.height = height

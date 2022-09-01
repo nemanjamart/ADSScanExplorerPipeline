@@ -38,7 +38,7 @@ class TestModels(unittest.TestCase):
         expected_page =  Page("0000255,001", vol.id)
         expected_page.label = "255-01"
         expected_page.volume_running_page_num = 1
-        expected_page.color_type = PageColor.Greyscale
+        expected_page.color_type = PageColor.Grayscale
         expected_page.page_type = PageType.FrontMatter
         
         expected_article =  Article("test......001..test", vol.id)
@@ -61,7 +61,7 @@ class TestModels(unittest.TestCase):
                     'name': '0000255,001',
                     'label': '255-01',
                     'format': 'image/tiff',
-                    'color_type': 'Greyscale',
+                    'color_type': 'Grayscale',
                     'page_type': 'FrontMatter',
                     'width': 3904,
                     'height': 5312,
@@ -161,7 +161,7 @@ class TestModels(unittest.TestCase):
 
         used_session = task_process_volume(self.data_folder, vol.id, upload_files=False, index_ocr=False, upload_db=True)
         
-        expected_request_args = {'type': 'seri', 'journal': 'test.', 'volume': '0001', 'pages': [{'name': '0000255,001', 'label': '255-01', 'format': 'image/tiff', 'color_type': 'Greyscale', 'page_type': 'FrontMatter', 'width': 3904, 'height': 5312, 'volume_running_page_num': 1, 'articles': [{'bibcode': 'test......001..test'}]}]}
+        expected_request_args = {'type': 'seri', 'journal': 'test.', 'volume': '0001', 'pages': [{'name': '0000255,001', 'label': '255-01', 'format': 'image/tiff', 'color_type': 'Grayscale', 'page_type': 'FrontMatter', 'width': 3904, 'height': 5312, 'volume_running_page_num': 1, 'articles': [{'bibcode': 'test......001..test'}]}]}
         from adsputils import load_config
         proj_home = os.path.realpath(os.path.join(os.path.dirname(__file__), '../../'))
         config = load_config(proj_home=proj_home)

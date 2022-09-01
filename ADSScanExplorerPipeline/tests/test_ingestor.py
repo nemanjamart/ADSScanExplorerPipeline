@@ -119,7 +119,7 @@ class TestIngestor(unittest.TestCase):
             self.assertEqual(page.name, expected_page.name)
             self.assertTrue(page.height in [5312, 6104])
             self.assertTrue(page.width in [4128, 3904])
-            self.assertEqual(page.color_type, PageColor.Greyscale)
+            self.assertEqual(page.color_type, PageColor.Grayscale)
         self.assertEqual(n , 2)
 
     @patch('ADSScanExplorerPipeline.models.Page.get_from_name_and_journal')
