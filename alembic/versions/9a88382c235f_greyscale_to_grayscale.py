@@ -29,7 +29,7 @@ def upgrade() -> None:
     old_type.drop(op.get_bind(), checkfirst=False)
     # Create and convert to the "new" status type
     new_type.create(op.get_bind(), checkfirst=False)
-    op.execute('UPDATE page SET color_type = REPLACE(color_type, \'Greyscale\', \'Grayscale\')')
+    op.execute('UPDATE page SET color_type = \'Grayscale\' WHERE color_type = \'Greyscale\'')
     op.execute('ALTER TABLE page ALTER COLUMN color_type TYPE pagecolor'
                ' USING color_type::pagecolor')
 
@@ -43,7 +43,7 @@ def downgrade() -> None:
     new_type.drop(op.get_bind(), checkfirst=False)
     # Create and convert to the "new" status type
     old_type.create(op.get_bind(), checkfirst=False)
-    op.execute('UPDATE page SET color_type = REPLACE(color_type, \'Grayscale\', \'Greyscale\')')
+    op.execute('UPDATE page SET color_type = \'Greyscale\' WHERE color_type = \'Grayscale\'')
     op.execute('ALTER TABLE page ALTER COLUMN color_type TYPE pagecolor'
                ' USING color_type::pagecolor')
     
