@@ -70,17 +70,20 @@ def split_top_map_row(line: str):
         if not line_split[1].isspace() and len(line_split[1]) > 0:
             label = line_split[1]
     if len(line_split) > 2:
+        type_index = 7
         type = line_split[2]
-        if type == "C":
-            name = name.replace(".", ",")
+        if type == "1":
+            name = name[:type_index] + "." + name[type_index + 1:]
+        elif type == "C":
+            name = name[:type_index] + "," + name[type_index + 1:]
         elif type == "B":
-            name = name.replace(".", ":")
+            name = name[:type_index] + ":" + name[type_index + 1:]
         elif type == "I":
-            name = name.replace(".", "I")
+            name = name[:type_index] + "I" + name[type_index + 1:]
         elif type == "P":
-            name = name.replace(".", "P")
+            name = name[:type_index] + "P" + name[type_index + 1:]
         elif type == "M":
-            name = name.replace(".", "M")
+            name = name[:type_index] + "M" + name[type_index + 1:]
     return name, label
 
 def split_top_row(line: str):
@@ -110,6 +113,8 @@ def parse_dat_file(file_path: str, journal_volume: JournalVolume, session: Sessi
                 if not check_page_name_is_valid(page_name):
                     continue
                 page = Page.get_from_name_and_journal(page_name, journal_volume.id, session)
+                if not page:
+                    raise Exception("Page: " + page_name + " in .dat but not .top")
                 if first:
                     article.start_page_number = page.volume_running_page_num
                     first = False
@@ -222,6 +227,7 @@ def index_ocr_files(ocr_path: str, vol: JournalVolume, session: Session):
             'article_bibcodes': articles,
             'journal': vol.journal,
             'volume': vol.volume,
+            'volume_int': vol.volume,
             'page_type': page.page_type.name,
             'page_number': page.volume_running_page_num,
             'page_label': page.label,
