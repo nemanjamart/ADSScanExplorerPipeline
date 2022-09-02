@@ -87,6 +87,10 @@ class JournalVolume(Base, Timestamp):
         return session.query(cls).filter(cls.status.in_([VolumeStatus.New, VolumeStatus.Update, VolumeStatus.Error])).all()
 
     @classmethod
+    def get_all(cls, session: Session) -> List[JournalVolume]:
+        return session.query(cls).all()
+
+    @classmethod
     def get_from_id_or_name(cls, id: str, session: Session) -> JournalVolume:
         vol = session.query(cls).filter(cls.id == id).one_or_none()
         if vol:

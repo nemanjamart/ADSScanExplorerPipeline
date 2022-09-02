@@ -2,7 +2,7 @@
 import os
 import argparse
 from distutils.util import strtobool
-from ADSScanExplorerPipeline.tasks import task_process_new_volumes, task_process_volume
+from ADSScanExplorerPipeline.tasks import task_process_new_volumes, task_process_volume, task_investigate_new_volumes
 
 # ============================= INITIALIZATION ==================================== #
 
@@ -22,16 +22,22 @@ if __name__ == '__main__':
                     required=True,
                     type=str,
                     help="Path to the base folder of all lists and bitmaps of all journals")
+    parser.add_argument("--process-db",
+                    dest="process_db",
+                    required=False,
+                    default="True",
+                    type=str,
+                    help="If the all information from the input folder should be processed for each volume")
     parser.add_argument("--upload-files",
                     dest="upload",
                     required=False,
-                    default="False",
+                    default="True",
                     type=str,
                     help="If image files should be uploaded to the s3 bucket")
     parser.add_argument("--index-ocr",
                     dest="ocr",
                     required=False,
-                    default="False",
+                    default="True",
                     type=str,
                     help="If ocr files should be index on opensearch")
     parser.add_argument("--upload-db",
@@ -40,9 +46,16 @@ if __name__ == '__main__':
                     default="True",
                     type=str,
                     help="If database should be uploaded to remote db")
+    parser.add_argument("--force-update",
+                    dest="force",
+                    required=False,
+                    default="False",
+                    type=str,
+                    help="Force updates of the volumes")
 
     subparsers = parser.add_subparsers(help='commands', dest="action")
     new_parser = subparsers.add_parser('NEW', help='Loops through input folder and processes all new or updated volumes')
+    update_parser = subparsers.add_parser('UPDATE', help='Reprocesses all updated volumes')
     run_parser = subparsers.add_parser('SINGLE', help='Process single volume')
     
     new_parser.add_argument("--process",
@@ -74,7 +87,9 @@ if __name__ == '__main__':
     elif not os.access(args.input_folder, os.R_OK):
         parser.error("the folder '{}' cannot be accessed".format(input_folder))
     else:
-        #TODO change to True by default before operational release
+        process_db = False 
+        if bool(strtobool(args.process_db)):
+            process_db = True
         upload = False 
         if bool(strtobool(args.upload)):
             upload = True
@@ -84,6 +99,9 @@ if __name__ == '__main__':
         upload_db = False 
         if bool(strtobool(args.upload_db)):
             upload_db = True
+        force = False 
+        if bool(strtobool(args.force)):
+            force = True
         
         if args.action == "NEW":
             process = False 
@@ -93,8 +111,12 @@ if __name__ == '__main__':
             if bool(strtobool(args.dry_run)):
                 dry_run = True
             logger.info("Process all new volumes in: %s", input_folder)
-            task_process_new_volumes.delay(input_folder, upload, ocr, upload_db, process, dry_run)
+            task_investigate_new_volumes.delay(input_folder, process_db, upload, ocr, upload_db, process, dry_run)
+       
+        elif args.action == "UPDATE":
+            task_process_new_volumes.delay(input_folder, process_db, upload, ocr, upload_db, process_all=True, force_update=force)
+
         elif args.action == "SINGLE":
             for id in args.ids:
                 logger.info("Process volume: %s in: %s", id, input_folder)
-                task_process_volume.delay(input_folder, id, upload, ocr, upload_db, force_update=True)
+                task_process_volume.delay(input_folder, id, process_db, upload, ocr, upload_db, force_update=True)

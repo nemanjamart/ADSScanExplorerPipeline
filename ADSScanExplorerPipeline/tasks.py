@@ -19,13 +19,14 @@ logger = app.logger
 
 app.conf.CELERY_QUEUES = (
     Queue('process-volume', app.exchange, routing_key='process-volume'),
-    Queue('process-new-volumes', app.exchange, routing_key='investigate-new-volumes'),
+    Queue('process-new-volumes', app.exchange, routing_key='process-new-volumes'),
+    Queue('investigate-new-volumes', app.exchange, routing_key='investigate-new-volumes'),
 )
 
 # ============================= TASKS ============================================= #
 
 @app.task(queue='process-volume')
-def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bool = False, index_ocr: bool = False, upload_db: bool = True, force_update: bool = False):
+def task_process_volume(base_path: str, journal_volume_id: str, process_db: bool = True, upload_files: bool = True, index_ocr: bool = True, upload_db: bool = True, force_update: bool = False):
     """
     Processes a journal volume
     """
@@ -34,7 +35,6 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
         try:
             vol = JournalVolume.get_from_id_or_name(journal_volume_id, session)
             if force_update:
-                set_force_update_parameters(vol)
                 vol.status = VolumeStatus.Processing
             elif vol.status != VolumeStatus.Done:
                 vol.status = VolumeStatus.Processing
@@ -42,20 +42,20 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
             session.add(vol)
             session.commit()
 
-            if not vol.db_done:
+            if process_db and (not vol.db_done or force_update):
                 task_process_db_for_volume(base_path, journal_volume_id)
 
             #Need to reload the volume to this session since it's been updated
             vol = JournalVolume.get_from_id_or_name(journal_volume_id, session)
-            if upload_db and vol.db_done and not vol.db_uploaded:
+            if upload_db and vol.db_done and (not vol.db_uploaded or force_update):
                 task_upload_db_for_volume(journal_volume_id)
 
             vol = JournalVolume.get_from_id_or_name(journal_volume_id, session)
-            if index_ocr and vol.db_done and not vol.ocr_uploaded:
+            if index_ocr and vol.db_done and (not vol.ocr_uploaded or force_update):
                 task_index_ocr_files_for_volume(base_path, journal_volume_id)
             
             vol = JournalVolume.get_from_id_or_name(journal_volume_id, session)
-            if upload_files and vol.db_done and not vol.bucket_uploaded:
+            if upload_files and vol.db_done and (not vol.bucket_uploaded or force_update):
                 task_upload_image_files_for_volume(base_path, journal_volume_id)
 
             vol = JournalVolume.get_from_id_or_name(journal_volume_id, session)
@@ -67,13 +67,6 @@ def task_process_volume(base_path: str, journal_volume_id: str, upload_files: bo
             return
     return session
 
-def set_force_update_parameters(vol: JournalVolume):
-    vol.db_done = False
-    vol.bucket_uploaded = False
-    vol.ocr_uploaded = False
-    vol.db_uploaded = False
-
-@app.task(queue='process-volume')
 def task_process_db_for_volume(base_path: str, journal_volume_id: str):
     logger.info("Processing db for journal_volume id: %s", journal_volume_id)
     error_msg = ""  
@@ -126,7 +119,6 @@ def task_process_db_for_volume(base_path: str, journal_volume_id: str):
     return session
 
 
-@app.task(queue='process-volume')
 def task_upload_db_for_volume(journal_volume_id: str):
     """
     Uploads the DB metadata to the service DB through a API call to the service
@@ -154,7 +146,6 @@ def task_upload_db_for_volume(journal_volume_id: str):
         set_ingestion_error_status(session, journal_volume_id, error_msg)
     return session
 
-@app.task(queue='process-volume')
 def task_upload_image_files_for_volume(base_path: str, journal_volume_id: str):
     error_msg = ""
     logger.info("Uploading images files for volume %s", journal_volume_id)
@@ -177,7 +168,6 @@ def task_upload_image_files_for_volume(base_path: str, journal_volume_id: str):
         set_ingestion_error_status(session, journal_volume_id, error_msg)
     return session
 
-@app.task(queue='process-volume')
 def task_index_ocr_files_for_volume(base_path: str, journal_volume_id: str):
     error_msg = ""
     logger.info("Indexing ocr files for volume %s", journal_volume_id)
@@ -199,13 +189,12 @@ def task_index_ocr_files_for_volume(base_path: str, journal_volume_id: str):
         set_ingestion_error_status(session, journal_volume_id, error_msg)
     return session
 
-@app.task(queue='process-new-volumes')
-def task_process_new_volumes(base_path: str, upload_files: bool = False, index_ocr: bool = False,  upload_db: bool = True, process: bool = True, dry_run: bool = False):
+@app.task(queue='investigate-new-volumes')
+def task_investigate_new_volumes(base_path: str, process_db: bool = True, upload_files: bool = True, index_ocr: bool = True,  upload_db: bool = True, process: bool = True, dry_run: bool = False):
     """
     Investigate if any new or updated volumes exists and process them if process flag is set to True
     """
     logger.info("Investigating new or changed volumes in %s", base_path)
-    volumes_to_process = []
     with app.session_scope() as session:
         for vol in identify_journals(base_path):
             existing_vol = JournalVolume.get_from_obj(vol, session)
@@ -228,12 +217,26 @@ def task_process_new_volumes(base_path: str, upload_files: bool = False, index_o
                     logger.info("DRY RUN: Volume: %s would have been added", str(vol.id))
                 else:
                     session.add(vol)
-                
-        for vol in JournalVolume.get_to_be_processed(session):
-            volumes_to_process.append(vol.id)
     if process and not dry_run:
-        for vol_id in volumes_to_process:
-            task_process_volume.delay(base_path, vol_id, upload_files, index_ocr, upload_db)
+        task_process_new_volumes.delay(base_path, process_db, upload_files, index_ocr, upload_db)   
+
+@app.task(queue='process-new-volumes')
+def task_process_new_volumes(base_path: str, process_db: bool = True, upload_files: bool = True, index_ocr: bool = True,  upload_db: bool = True, process_all: bool = False, force_update: bool = False):
+    """
+    Process new or updated volumes
+    """
+    logger.info("Processing new or changed volumes in %s", base_path)
+    volumes_to_process = []
+    with app.session_scope() as session:
+        if process_all:
+            for vol in JournalVolume.get_all(session):
+                volumes_to_process.append(vol.id)
+        else:
+            for vol in JournalVolume.get_to_be_processed(session):
+                volumes_to_process.append(vol.id)
+
+    for vol_id in volumes_to_process:
+        task_process_volume.delay(base_path, vol_id, process_db, upload_files, index_ocr, upload_db, force_update=force_update)
     return session
 
 if __name__ == '__main__':
