@@ -1,7 +1,7 @@
 import requests
 import traceback
 import os
-from ADSScanExplorerPipeline.models import JournalVolume, VolumeStatus
+from ADSScanExplorerPipeline.models import JournalVolume, VolumeStatus, Page, Article
 from ADSScanExplorerPipeline.ingestor import parse_top_file, parse_dat_file, parse_image_files, identify_journals, upload_image_files
 from ADSScanExplorerPipeline.ingestor import check_all_image_files_exists, index_ocr_files, set_ingestion_error_status, set_correct_volume_status
 from kombu import Queue
@@ -83,6 +83,9 @@ def task_process_db_for_volume(base_path: str, journal_volume_id: str):
         try:
             vol = JournalVolume.get_from_id_or_name(journal_volume_id, session)
             vol.status = VolumeStatus.Processing
+            #Clear previous pages and articles associated with this journal in case of updates
+            Page.delete_all_from_volume(vol.id, session)
+            Article.delete_all_from_volume(vol.id, session)
             session.add(vol)
             session.commit()
         except Exception as e:

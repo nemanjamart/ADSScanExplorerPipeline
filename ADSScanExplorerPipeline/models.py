@@ -136,6 +136,10 @@ class Article(Base, Timestamp):
             article = Article(bibcode, journal_volume_id)
         return article
 
+    @classmethod
+    def delete_all_from_volume(cls, journal_volume_id: str, session: Session):
+        return session.query(cls).filter(cls.journal_volume_id == journal_volume_id).delete()
+
 class Page(Base, Timestamp):
     __tablename__ = 'page'
     __table_args__ = (Index('page_volume_index', "journal_volume_id"), Index('page_name_index', "name"))
@@ -180,6 +184,10 @@ class Page(Base, Timestamp):
         if not page:
             page = Page(name, journal_volume_id)
         return page
+
+    @classmethod
+    def delete_all_from_volume(cls, journal_volume_id: str, session: Session):
+        return session.query(cls).filter(cls.journal_volume_id == journal_volume_id).delete()
 
     def parse_info_from_name(self, name) -> str:
         """In general file names follow the following format
