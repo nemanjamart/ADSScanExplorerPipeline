@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import patch
+from alchemy_mock.mocking import UnifiedAlchemyMagicMock
 import os
 from ADSScanExplorerPipeline.models import JournalVolume, Page, Article, PageColor
 from ADSScanExplorerPipeline.exceptions import MissingImageFileException
@@ -163,3 +164,19 @@ class TestIngestor(unittest.TestCase):
         self.assertEqual(len(keys), 2)
         self.assertTrue('bitmaps/seri/test_/0001/600/0000255,001' in keys)
         self.assertTrue('bitmaps/seri/test_/0001/600/0000255,001.tif' in keys)
+    
+    def test_parse_problematic_files(self):
+        session = UnifiedAlchemyMagicMock()
+        vol = JournalVolume("seri", "test.", "0002")
+        top_filename = vol.journal + vol.volume + ".top"
+        dat_filename = vol.journal + vol.volume + ".dat"
+        top_file_path = os.path.join(self.data_folder, "problematic_lists", top_filename)
+        dat_file_path = os.path.join(self.data_folder, "problematic_lists", dat_filename)
+
+        for page in parse_top_file(top_file_path, vol, session):
+            session.add(page)
+        for article in parse_dat_file(dat_file_path, vol, session):
+            session.add(article)
+
+        self.assertEqual(session.query(Page).count(),5)
+        self.assertEqual(session.query(Article).count(),2)
