@@ -218,7 +218,8 @@ def task_investigate_new_volumes(base_path: str, process_db: bool = True, upload
                 else:
                     session.add(vol)
     if process and not dry_run:
-        task_process_new_volumes.delay(base_path, process_db, upload_files, index_ocr, upload_db)   
+        task_process_new_volumes.delay(base_path, process_db, upload_files, index_ocr, upload_db)  
+    return session 
 
 @app.task(queue='process-new-volumes')
 def task_process_new_volumes(base_path: str, process_db: bool = True, upload_files: bool = True, index_ocr: bool = True,  upload_db: bool = True, process_all: bool = False, force_update: bool = False):
