@@ -3,22 +3,22 @@ import os
 import unittest
 from unittest.mock import patch, MagicMock
 from alchemy_mock.mocking import UnifiedAlchemyMagicMock
-from ADSScanExplorerPipeline.tasks import task_process_new_volumes, task_process_volume, task_upload_image_files_for_volume, task_index_ocr_files_for_volume
+from ADSScanExplorerPipeline.tasks import task_investigate_new_volumes, task_process_volume, task_upload_image_files_for_volume, task_index_ocr_files_for_volume
 from ADSScanExplorerPipeline.models import JournalVolume, VolumeStatus, Page, PageColor, PageType, Article
 from moto import mock_s3
 import boto3
 
-class TestModels(unittest.TestCase):
+class TestTasks(unittest.TestCase):
 
     test_home = os.path.realpath(os.path.join(os.path.dirname(__file__), '../'))
     data_folder = os.path.join(test_home, "tests/data/")
 
     @patch('ADSScanExplorerPipeline.app.ADSScanExplorerPipeline.session_scope')
-    def test_task_process_new_volumes(self, session_scope):
+    def test_task_investigate_new_volumes(self, session_scope):
         session = UnifiedAlchemyMagicMock()
         session_scope.return_value = session
-        used_session = task_process_new_volumes(self.data_folder, upload_files = False, process=False)
-        self.assertEqual(len(used_session.query(JournalVolume).filter().all()), 1)
+        used_session = task_investigate_new_volumes(self.data_folder, process=False)
+        self.assertEqual(len(used_session.query(JournalVolume).all()), 1)
         for vol in used_session.query(JournalVolume).filter(JournalVolume.journal == "").all():
             self.assertEqual(vol.type, "seri")
             self.assertEqual(vol.journal, "test.")
@@ -142,7 +142,7 @@ class TestModels(unittest.TestCase):
         
         OpenSearch.assert_called()
         OpenSearch.return_value.delete_by_query.assert_called()
-        self.assertEqual("{'page_id': 'test.0001_0000255,001', 'volume_id': 'test.0001', 'text': 'test ocr text', 'article_bibcodes': [], 'journal': 'test.', 'volume': '0001', 'page_type': 'FrontMatter', 'page_number': None, 'page_label': '255-1', 'page_color': 'BW', 'project': ''}",
+        self.assertEqual("{'page_id': 'test.0001_0000255,001', 'volume_id': 'test.0001', 'text': 'test ocr text', 'article_bibcodes': [], 'journal': 'test.', 'volume': '0001', 'volume_int': '0001', 'page_type': 'FrontMatter', 'page_number': None, 'page_label': '255-1', 'page_color': 'BW', 'project': ''}",
             str(OpenSearch.return_value.index.call_args_list[0][1]['body']))
 
     @patch('ADSScanExplorerPipeline.app.ADSScanExplorerPipeline.session_scope')

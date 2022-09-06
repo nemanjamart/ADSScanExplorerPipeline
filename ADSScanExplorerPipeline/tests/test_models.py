@@ -10,6 +10,7 @@ class TestModels(unittest.TestCase):
         self.assertEqual(PageType.page_type_from_separator(":"), PageType.BackMatter)
         self.assertEqual(PageType.page_type_from_separator("I"), PageType.Insert)
         self.assertEqual(PageType.page_type_from_separator("P"), PageType.Plate)
+        self.assertEqual(PageType.page_type_from_separator("M"), PageType.Normal)
     
     def testPageLabel(self):
         page = Page("0000255.000", "vol_id")
