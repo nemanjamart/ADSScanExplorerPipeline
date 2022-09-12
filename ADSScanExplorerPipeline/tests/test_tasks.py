@@ -47,7 +47,7 @@ class TestTasks(unittest.TestCase):
         session_scope.return_value = session
 
         used_session = task_process_volume(self.data_folder, vol.id, upload_files=False, index_ocr=False, upload_db=False)
-        for vol in used_session.query(JournalVolume).filter(JournalVolume.journal == "").all():
+        for vol in used_session.query(JournalVolume).filter().all():
             self.assertEqual(vol.type, "seri")
             self.assertEqual(vol.journal, "test.")
             self.assertEqual(vol.volume, "0001")
@@ -63,7 +63,7 @@ class TestTasks(unittest.TestCase):
                     'format': 'image/tiff',
                     'color_type': 'Grayscale',
                     'page_type': 'FrontMatter',
-                    'width': 3904,
+                    'width': 4304,
                     'height': 5312,
                     'volume_running_page_num': 1,
                     'articles': [{'bibcode':'test......001..test'}] 
@@ -111,7 +111,7 @@ class TestTasks(unittest.TestCase):
 
         used_session = task_upload_image_files_for_volume(self.data_folder, vol.id)
 
-        for vol in used_session.query(JournalVolume).filter(JournalVolume.journal == "").all():
+        for vol in used_session.query(JournalVolume).filter().all():
             self.assertTrue(vol.bucket_uploaded)
 
         keys = []
@@ -161,7 +161,7 @@ class TestTasks(unittest.TestCase):
 
         used_session = task_process_volume(self.data_folder, vol.id, upload_files=False, index_ocr=False, upload_db=True)
         
-        expected_request_args = {'type': 'seri', 'journal': 'test.', 'volume': '0001', 'pages': [{'name': '0000255,001', 'label': '255-01', 'format': 'image/tiff', 'color_type': 'Grayscale', 'page_type': 'FrontMatter', 'width': 3904, 'height': 5312, 'volume_running_page_num': 1, 'articles': [{'bibcode': 'test......001..test'}]}]}
+        expected_request_args = {'type': 'seri', 'journal': 'test.', 'volume': '0001', 'pages': [{'name': '0000255,001', 'label': '255-01', 'format': 'image/tiff', 'color_type': 'Grayscale', 'page_type': 'FrontMatter', 'width': 4304, 'height': 5312, 'volume_running_page_num': 1, 'articles': [{'bibcode': 'test......001..test'}]}]}
         from adsputils import load_config
         proj_home = os.path.realpath(os.path.join(os.path.dirname(__file__), '../../'))
         config = load_config(proj_home=proj_home)
@@ -171,7 +171,6 @@ class TestTasks(unittest.TestCase):
         mock_put.assert_called_with(url, json=expected_request_args, headers={'Authorization': 'Bearer:' + auth_token})
 
         for vol in used_session.query(JournalVolume).filter(JournalVolume.journal == "").all():
-            print(vol)
             self.assertEqual(vol.type, "seri")
             self.assertEqual(vol.journal, "test.")
             self.assertEqual(vol.volume, "0001")

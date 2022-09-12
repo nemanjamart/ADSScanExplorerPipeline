@@ -138,7 +138,7 @@ def parse_image_files(image_path: str, journal_volume: JournalVolume, session: S
     Some pages have multiple images a Black-and-White without file ending and a .tif which can
     be either grayscale or color based on the number of channels.
     """
-    for filename in os.listdir(image_path):
+    for filename in sorted(os.listdir(image_path)):
         try:
             if filename.endswith(".png") or filename.endswith(".jpg"):
                 continue
@@ -290,20 +290,20 @@ def hash_volume(base_path: str, vol: JournalVolume) -> str:
     """
     vol_hash = ""
     list_path = os.path.join(base_path, config.get('TOP_SUB_DIR', '') ,vol.type, vol.journal)
-    for file in os.listdir(list_path):
+    for file in sorted(os.listdir(list_path)):
         if str(vol.volume) in file:
             file_path = os.path.join(list_path, file)
             modified_time = os.path.getmtime(file_path)
             vol_hash = md5((vol_hash + str(modified_time) + file).encode("utf-8")).hexdigest()
     
     image_path = os.path.join(base_path, config.get('BITMAP_SUB_DIR', '') ,vol.type, vol.journal, vol.volume, "600")
-    for file in os.listdir(image_path):
+    for file in sorted(os.listdir(image_path)):
         file_path = os.path.join(image_path, file)
         modified_time = os.path.getmtime(file_path)
         vol_hash = md5((vol_hash + str(modified_time) + file).encode("utf-8")).hexdigest()
 
     ocr_path = os.path.join(base_path, config.get('OCR_SUB_DIR', '') ,vol.type, vol.journal, vol.volume)
-    for file in os.listdir(ocr_path):
+    for file in sorted(os.listdir(ocr_path)):
         file_path = os.path.join(ocr_path, file)
         modified_time = os.path.getmtime(file_path)
         vol_hash = md5((vol_hash + str(modified_time) + file).encode("utf-8")).hexdigest()

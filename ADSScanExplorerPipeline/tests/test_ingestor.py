@@ -16,7 +16,7 @@ class TestIngestor(unittest.TestCase):
     def test_vol_hash(self):
         vol = JournalVolume("seri", "test.", "0001")
         hash = hash_volume(self.data_folder, vol)
-        self.assertEqual(hash, "18cb4411e0a06defb0a5005cd8ab1fd0")
+        self.assertEqual(hash, "30ff017eef46be79cca1ec01146895ea")
     
     def test_parse_volume(self):
         vol = JournalVolume("seri", "test.", "0001")
@@ -118,9 +118,9 @@ class TestIngestor(unittest.TestCase):
         for page in parse_image_files(image_folder_path, vol, None):
             n += 1
             self.assertEqual(page.name, expected_page.name)
-            self.assertTrue(page.height in [5312, 6104])
-            self.assertTrue(page.width in [4128, 3904])
-            self.assertEqual(page.color_type, PageColor.Grayscale)
+            self.assertEqual(page.height,5312)
+            self.assertTrue(page.width, 4320)
+            self.assertTrue(page.color_type in [PageColor.Grayscale, PageColor.BW])
         self.assertEqual(n , 2)
 
     @patch('ADSScanExplorerPipeline.models.Page.get_from_name_and_journal')
