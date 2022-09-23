@@ -7,7 +7,7 @@ jobs:
 
     runs-on: ubuntu-latest
     env:
-      PGDATABASE: scan_explorer_database
+      PGDATABASE: scan_explorer_pipeline
       PGPASSWORD: scan_explorer
       PGUSER: scan_explorer
       PGHOST: localhost
@@ -17,7 +17,7 @@ jobs:
       postgres:
         image: postgres:14.2
         env:
-          POSTGRES_DB: scan_explorer_database
+          POSTGRES_DB: scan_explorer_pipeline
           POSTGRES_PASSWORD: scan_explorer
           POSTGRES_USER: scan_explorer
           POSTGRES_HOST: localhost
