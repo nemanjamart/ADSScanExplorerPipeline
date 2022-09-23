@@ -45,5 +45,5 @@ jobs:
         
     - name: Run unittests
       run: |
-         python -m unittest scan_explorer_service/tests/test_*.py        
+         py.test
 
