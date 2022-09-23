@@ -7,9 +7,9 @@ jobs:
 
     runs-on: ubuntu-latest
     env:
-      PGDATABASE: test
-      PGPASSWORD: postgres
-      PGUSER: postgres
+      PGDATABASE: scan_explorer_database
+      PGPASSWORD: scan_explorer
+      PGUSER: scan_explorer
       PGHOST: localhost
       PGPORT: 5432
 
@@ -35,7 +35,7 @@ jobs:
     - uses: actions/checkout@v2
     - uses: actions/setup-python@v2
       with:
-        python-version: 3.10
+        python-version: '3.10'
 
     - name: Install dependencies
       run: |
